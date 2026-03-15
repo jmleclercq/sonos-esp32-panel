@@ -16,8 +16,14 @@ Dedicated Sonos touchscreen controller using an ESP32 Sunton display and ESPHome
 
 # ESP32 Sonos Touch Panel
 
-A stable ESPHome project for a Sunton ESP32 2.8" touchscreen display used as a dedicated Sonos controller in Home Assistant
+![ESPHome](https://img.shields.io/badge/ESPHome-supported-blue)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5)
+![ESP32](https://img.shields.io/badge/ESP32-supported-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
 
+A standalone **ESP32 touchscreen controller for Sonos**, powered by **ESPHome** and integrated with **Home Assistant**.
+
+![Sonos Touch Panel](images/sonos-touch-panel.jpg)
 
 --------------------------------------------------
 
