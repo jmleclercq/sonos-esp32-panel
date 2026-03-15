@@ -1,147 +1,131 @@
-# ESP32 Sonos Touch Panel for Home Assistant
+# ESP32 Sonos Touch Panel
 
-This project creates a simple Sonos control panel using the Sunton ESP32-2432S028R touchscreen display and ESPHome.
+A stable ESPHome project for a Sunton ESP32 2.8" touchscreen display used as a dedicated Sonos controller in Home Assistant.
 
-The panel connects to Home Assistant and displays live information from a Sonos speaker while providing basic touch controls.
+This repository documents the first stable working version before visual improvements.
 
-Current features:
+## Stable features
 
-- Display current Sonos state
-- Display current track title
-- Display current artist
-- Touch controls for:
+- Sonos state display
+- Track title display
+- Artist display
+- Touch controls:
+  - Previous track
+  - Play / Pause
+  - Next track
   - Volume down
-  - Pause
   - Volume up
+- Unicode cleanup for Sonos metadata
+- Stable touchscreen mapping
+- Stable portrait layout
 
-The project was tested with a Sonos Arc entity:
+## Hardware
 
-media_player.arc
+Tested with:
 
+- Sunton ESP32-2432S028
+- 2.8" TFT screen
+- XPT2046 touchscreen controller
 
---------------------------------------------------
-
-Hardware
-
-- Sunton ESP32-2432S028R
-- 2.8 inch touchscreen (ILI9341)
-- XPT2046 resistive touchscreen controller
-- 5V power supply
-- USB data cable
-
-
---------------------------------------------------
-
-Software stack
+## Software stack
 
 - ESPHome
 - Home Assistant
-- Sonos Home Assistant integration
+- ESP-IDF
 
-
---------------------------------------------------
-
-Current status
-
-Working:
-
-- display initialization
-- touchscreen input
-- Home Assistant API connection
-- Sonos metadata display
-- working touchscreen controls
-
-Known limitations:
-
-- a vertical blue strip appears on the right side of the display depending on the driver configuration
-
-
---------------------------------------------------
-
-Project structure
-
-Example structure:
+## Project structure
 
 .
 ├── README.md
+├── TROUBLESHOOTING.md
 └── esphome
     └── sunton-28-sonos-panel.yaml
 
+## Main configuration file
 
---------------------------------------------------
+esphome/sunton-28-sonos-panel.yaml
 
-Secrets example
+## Home Assistant entity used
 
-Example secrets.yaml:
+This version is configured for:
 
-wifi_ssid: "YOUR_WIFI"
-wifi_password: "YOUR_PASSWORD"
-fallback_password: "CHANGE_ME"
+media_player.arc
 
+If your Sonos entity has a different name, replace every occurrence of:
 
---------------------------------------------------
+media_player.arc
 
-Installing ESPHome on Linux
+in the YAML.
 
-Create a Python virtual environment:
+## Stable interface layout
 
-python3 -m venv .venv
-source .venv/bin/activate
+Top area:
+- SONOS ARC header
+- state
+- title
+- artist
 
-Install ESPHome:
+Bottom area:
+- PREV / PLAY / NEXT
+- volume - / +
 
-pip install esphome
+## Important notes
 
+### 1. This is the stable reference version
 
---------------------------------------------------
+This version is intentionally frozen because:
 
-Compile firmware
+- the display works
+- the touchscreen mapping works
+- Sonos commands work
+- text normalization is good enough for daily use
 
-esphome compile esphome/sunton-28-sonos-panel.yaml
+Future improvements should be built from this version.
 
+### 2. Unicode cleanup
 
---------------------------------------------------
+Some Sonos metadata may contain typographic apostrophes or accented characters that do not render perfectly on ESPHome fonts.
 
-Flash firmware
+A normalization function is included to reduce these display issues.
 
-USB device example:
+### 3. GPIO warnings
 
-esphome run esphome/sunton-28-sonos-panel.yaml --device /dev/ttyUSB0
+ESPHome may warn that some GPIOs are strapping pins, especially GPIO12.
 
-or
+This is expected on this board and does not prevent the project from working with the current setup.
 
-esphome run esphome/sunton-28-sonos-panel.yaml --device /dev/ttyACM0
+## Flashing from Home Assistant
 
+1. Copy the YAML into:
 
---------------------------------------------------
+/config/esphome/sunton-28-sonos-panel.yaml
 
-What has been validated
+2. Make sure your ESPHome secrets are available:
+- wifi_ssid
+- wifi_password
 
-During testing the following was confirmed:
+3. Install or update the device from ESPHome Builder.
 
-- the screen initializes correctly
-- the touchscreen coordinates are detected
-- Home Assistant connects successfully
-- Sonos metadata is received
-- Home Assistant actions triggered from ESPHome work correctly
+## Git workflow used for this stable version
 
+Typical workflow:
 
---------------------------------------------------
+git add .
+git commit -m "Stable version: Sonos ESP32 touch panel working"
+git push
 
-Next improvements
+## Roadmap
 
-Planned improvements:
+Planned future improvements after this stable checkpoint:
 
-- improve UI layout
-- better handling of long text
-- play/resume button
-- Sonos favorites
-- improved graphics
-- possible migration to LVGL interface
+- better UI design
+- improved text handling for long titles
+- volume bar
+- album artwork
+- LVGL interface
+- sleep mode
+- auto brightness
 
+## License
 
---------------------------------------------------
-
-License
-
-Add your preferred license (MIT recommended).
+MIT
