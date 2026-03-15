@@ -1,19 +1,26 @@
 # ESP32 Sonos Touch Panel
 
-![ESPHome](https://img.shields.io/badge/ESPHome-supported-blue)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5)
-![ESP32](https://img.shields.io/badge/ESP32-supported-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  <img src="https://img.shields.io/badge/ESP32-Sunton%202.8%22-blue?logo=espressif" />
+  <img src="https://img.shields.io/badge/ESPHome-supported-000000?logo=esphome" />
+  <img src="https://img.shields.io/badge/Home%20Assistant-integrated-41BDF5?logo=homeassistant" />
+  <img src="https://img.shields.io/badge/Sonos-controller-black?logo=sonos" />
+  <img src="https://img.shields.io/badge/License-MIT-green" />
+</p>
 
-A standalone **ESP32 touchscreen controller for Sonos**, powered by **ESPHome** and integrated with **Home Assistant**.
+<p align="center">
+  Dedicated Sonos touchscreen controller using a Sunton ESP32 display and ESPHome.
+</p>
 
-![Sonos Touch Panel](images/sonos-touch-panel.png)
+<p align="center">
+  <img src="images/screen.jpeg" width="420" alt="Stable Sonos touch panel result">
+</p>
 
---------------------------------------------------
+---
 
-OVERVIEW
+## Overview
 
-This project implements a dedicated Sonos controller using a Sunton ESP32-2432S028 2.8" touchscreen display with ESPHome integrated into Home Assistant.
+This project implements a dedicated Sonos controller using a **Sunton ESP32-2432S028 2.8" touchscreen display** with **ESPHome** integrated into **Home Assistant**.
 
 The panel displays:
 
@@ -21,7 +28,7 @@ The panel displays:
 - Track title
 - Artist name
 
-Touch controls:
+And provides touch controls for:
 
 - Previous track
 - Play / Pause
@@ -29,51 +36,68 @@ Touch controls:
 - Volume down
 - Volume up
 
-This repository documents the first stable version of the project.
+This repository documents the **first stable working version** of the project.
 
---------------------------------------------------
+---
 
-HARDWARE
+## Proven result
+
+The screenshot above shows the current stable interface running on the device after installation and configuration.
+
+Current stable status:
+
+- display fully working
+- touchscreen mapping working
+- Sonos controls working
+- title and artist display working
+- long-title handling working
+- accent handling stabilized enough for daily use
+
+---
+
+## Hardware
 
 Tested with:
 
-Sunton ESP32-2432S028
+**Sunton ESP32-2432S028**
 
 Features:
 
 - ESP32 microcontroller
 - 2.8" TFT display
 - XPT2046 touchscreen controller
-- SPI display interface
+- integrated SPI display interface
 
---------------------------------------------------
+---
 
-SOFTWARE STACK
+## Software stack
 
 - ESPHome
 - Home Assistant
 - ESP-IDF framework
 
---------------------------------------------------
+---
 
-PROJECT STRUCTURE
+## Project structure
 
-.
-├── README.md
-├── TROUBLESHOOTING.md
-└── esphome
-    ├── sunton-2432s028r-sonos.yaml
-    └── secrets.example.yaml
+    .
+    ├── README.md
+    ├── TROUBLESHOOTING.md
+    ├── images
+    │   └── screen.jpeg
+    └── esphome
+        ├── sunton-2432s028r-sonos.yaml
+        └── secrets.example.yaml
 
---------------------------------------------------
+---
 
-ESPHOME CONFIGURATION
+## ESPHome configuration
 
 Main configuration file:
 
-esphome/sunton-2432s028r-sonos.yaml
+    esphome/sunton-2432s028r-sonos.yaml
 
-This file includes:
+This file contains:
 
 - display configuration
 - touchscreen calibration
@@ -81,54 +105,58 @@ This file includes:
 - Unicode text normalization
 - touch button mapping
 
---------------------------------------------------
+---
 
-HOME ASSISTANT ENTITY
+## Home Assistant entity
 
 The configuration uses the Sonos entity:
 
-media_player.arc
+    media_player.arc
 
-If your entity has a different name, replace every occurrence of media_player.arc inside the YAML file.
+If your Sonos entity has a different name, replace all occurrences of:
 
---------------------------------------------------
+    media_player.arc
 
-CONFIGURATION
+inside the YAML configuration.
+
+---
+
+## Configuration
 
 Copy the example secrets file:
 
-cp esphome/secrets.example.yaml esphome/secrets.yaml
+    cp esphome/secrets.example.yaml esphome/secrets.yaml
 
-Edit the file with your WiFi credentials:
+Then edit it with your WiFi credentials:
 
-wifi_ssid: "YOUR_WIFI"
-wifi_password: "YOUR_PASSWORD"
+    wifi_ssid: "YOUR_WIFI"
+    wifi_password: "YOUR_PASSWORD"
 
---------------------------------------------------
+---
 
-INTERFACE LAYOUT
+## Interface layout
 
-Top section
+Top section:
 
 - SONOS ARC header
 - playback state
 - track title
 - artist
 
-Bottom section
+Bottom section:
 
 - PREV | PLAY | NEXT
 - volume - | volume +
 
 Touching these areas sends commands to Home Assistant.
 
---------------------------------------------------
+---
 
-NOTES
+## Notes
 
-Stable reference version
+### Stable reference version
 
-This repository represents a stable working baseline:
+This repository represents a **stable working baseline**:
 
 - display works correctly
 - touchscreen mapping works
@@ -137,61 +165,56 @@ This repository represents a stable working baseline:
 
 Future improvements should build from this version.
 
---------------------------------------------------
-
-UNICODE HANDLING
+### Unicode handling
 
 Sonos metadata sometimes contains typographic characters such as apostrophes or accents.
 
 The YAML includes a normalization function to reduce display artifacts.
 
---------------------------------------------------
+### GPIO warnings
 
-GPIO WARNINGS
-
-ESPHome may warn about strapping pins (GPIO12).
+ESPHome may warn about strapping pins such as **GPIO12**.
 
 This is expected on this board and does not affect normal operation.
 
---------------------------------------------------
+---
 
-FLASHING
+## Flashing
 
 1. Copy the YAML file to your ESPHome configuration folder:
 
-/config/esphome/sunton-2432s028r-sonos.yaml
+       /config/esphome/sunton-2432s028r-sonos.yaml
 
 2. Ensure secrets are configured.
 
-3. Install the device from ESPHome Builder in Home Assistant.
+3. Install the device from **ESPHome Builder** in Home Assistant.
 
---------------------------------------------------
+---
 
-GIT WORKFLOW
+## Git workflow
 
 Typical workflow:
 
-git add .
-git commit -m "Update configuration"
-git push
+    git add .
+    git commit -m "Update configuration"
+    git push
 
---------------------------------------------------
+---
 
-ROADMAP
+## Roadmap
 
-Planned improvements:
+Planned future improvements:
 
-- improved UI
-- better handling of long titles
-- volume slider
-- album artwork
-- LVGL interface
 - screen sleep mode
-- automatic brightness
+- wake on touch
+- refined UI polish
+- optional volume indicator
+- optional LVGL version later
 
---------------------------------------------------
+At this stage, no further functional changes are required for the stable version.
 
-LICENSE
+---
+
+## License
 
 MIT
-
