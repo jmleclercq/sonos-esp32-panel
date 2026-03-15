@@ -1,0 +1,325 @@
+esphome:
+  name: sunton-28-sonos-panel
+  friendly_name: Sunton Sonos Panel
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+captive_portal:
+
+web_server:
+
+globals:
+  - id: title_line_1
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+  - id: title_line_2
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+  - id: artist_line_1
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+  - id: artist_line_2
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+spi:
+  - id: tft_spi
+    clk_pin: GPIO14
+    mosi_pin: GPIO13
+    miso_pin: GPIO12
+
+  - id: touch_spi
+    clk_pin: GPIO25
+    mosi_pin: GPIO32
+    miso_pin: GPIO39
+
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: Display Backlight
+    id: display_backlight
+    restore_mode: ALWAYS_ON
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 16
+    glyphs: "!%()+,-./0123456789:;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_°?àâäæçèéêëîïôöœùûüÿÀÂÄÆÇÈÉÊËÎÏÔÖŒÙÛÜŸ'’ "
+
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 20
+    glyphs: "!%()+,-./0123456789:;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_°?àâäæçèéêëîïôöœùûüÿÀÂÄÆÇÈÉÊËÎÏÔÖŒÙÛÜŸ'’ "
+
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 26
+    glyphs: "!%()+,-./0123456789:;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_°?àâäæçèéêëîïôöœùûüÿÀÂÄÆÇÈÉÊËÎÏÔÖŒÙÛÜŸ'’ "
+
+text_sensor:
+  - platform: homeassistant
+    id: sonos_title
+    entity_id: media_player.arc
+    attribute: media_title
+    on_value:
+      then:
+        - lambda: |-
+            auto normalize = [](std::string s) -> std::string {
+              auto repl=[&](std::string a,std::string b){
+                size_t pos=0;
+                while((pos=s.find(a,pos))!=std::string::npos){
+                  s.replace(pos,a.length(),b);
+                  pos+=b.length();
+                }
+              };
+
+              repl("’","'");
+              repl("‘","'");
+              repl("`","'");
+              repl("´","'");
+
+              repl("à","a"); repl("â","a"); repl("ä","a");
+              repl("À","A"); repl("Â","A"); repl("Ä","A");
+
+              repl("é","e"); repl("è","e"); repl("ê","e"); repl("ë","e");
+              repl("É","E"); repl("È","E"); repl("Ê","E"); repl("Ë","E");
+
+              repl("î","i"); repl("ï","i");
+              repl("Î","I"); repl("Ï","I");
+
+              repl("ô","o"); repl("ö","o");
+              repl("Ô","O"); repl("Ö","O");
+
+              repl("ù","u"); repl("û","u"); repl("ü","u");
+              repl("Ù","U"); repl("Û","U"); repl("Ü","U");
+
+              repl("ÿ","y");
+              repl("Ÿ","Y");
+
+              repl("ç","c");
+              repl("Ç","C");
+
+              repl("œ","oe");
+              repl("Œ","OE");
+
+              repl("æ","ae");
+              repl("Æ","AE");
+
+              return s;
+            };
+
+            std::string title = normalize(id(sonos_title).state.c_str());
+
+            if (title.length() > 18) {
+              id(title_line_1) = title.substr(0, 18);
+              id(title_line_2) = title.substr(18);
+            } else {
+              id(title_line_1) = title;
+              id(title_line_2) = "";
+            }
+
+  - platform: homeassistant
+    id: sonos_artist
+    entity_id: media_player.arc
+    attribute: media_artist
+    on_value:
+      then:
+        - lambda: |-
+            auto normalize = [](std::string s) -> std::string {
+              auto repl=[&](std::string a,std::string b){
+                size_t pos=0;
+                while((pos=s.find(a,pos))!=std::string::npos){
+                  s.replace(pos,a.length(),b);
+                  pos+=b.length();
+                }
+              };
+
+              repl("’","'");
+              repl("‘","'");
+              repl("`","'");
+              repl("´","'");
+
+              repl("à","a"); repl("â","a"); repl("ä","a");
+              repl("À","A"); repl("Â","A"); repl("Ä","A");
+
+              repl("é","e"); repl("è","e"); repl("ê","e"); repl("ë","e");
+              repl("É","E"); repl("È","E"); repl("Ê","E"); repl("Ë","E");
+
+              repl("î","i"); repl("ï","i");
+              repl("Î","I"); repl("Ï","I");
+
+              repl("ô","o"); repl("ö","o");
+              repl("Ô","O"); repl("Ö","O");
+
+              repl("ù","u"); repl("û","u"); repl("ü","u");
+              repl("Ù","U"); repl("Û","U"); repl("Ü","U");
+
+              repl("ÿ","y");
+              repl("Ÿ","Y");
+
+              repl("ç","c");
+              repl("Ç","C");
+
+              repl("œ","oe");
+              repl("Œ","OE");
+
+              repl("æ","ae");
+              repl("Æ","AE");
+
+              return s;
+            };
+
+            std::string artist = normalize(id(sonos_artist).state.c_str());
+
+            if (artist.length() > 20) {
+              id(artist_line_1) = artist.substr(0, 20);
+              id(artist_line_2) = artist.substr(20);
+            } else {
+              id(artist_line_1) = artist;
+              id(artist_line_2) = "";
+            }
+
+  - platform: homeassistant
+    id: sonos_state
+    entity_id: media_player.arc
+
+display:
+  - platform: mipi_spi
+    model: ESP32-2432S028
+    spi_id: tft_spi
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    reset_pin: GPIO4
+    update_interval: 1s
+    lambda: |-
+      it.fill(Color(10,12,20));
+
+      it.filled_rectangle(0,0,240,34,Color(45,55,95));
+      it.printf(120,6,id(font_large),Color(255,255,255),TextAlign::TOP_CENTER,"SONOS ARC");
+
+      it.rectangle(18,46,96,28,Color(80,220,220));
+      it.printf(66,52,id(font_medium),Color(80,220,220),TextAlign::TOP_CENTER,"%s",id(sonos_state).state.c_str());
+
+      it.printf(18,90,id(font_large),Color(255,255,255),"%s",id(title_line_1).c_str());
+      it.printf(18,118,id(font_large),Color(255,255,255),"%s",id(title_line_2).c_str());
+
+      it.printf(18,160,id(font_large),Color(120,255,160),"%s",id(artist_line_1).c_str());
+      it.printf(18,186,id(font_large),Color(120,255,160),"%s",id(artist_line_2).c_str());
+
+      it.rectangle(12,208,64,34,Color(255,255,255));
+      it.rectangle(88,208,64,34,Color(255,200,80));
+      it.rectangle(164,208,64,34,Color(255,255,255));
+
+      it.printf(44,216,id(font_medium),Color(255,255,255),TextAlign::TOP_CENTER,"PREV");
+      it.printf(120,216,id(font_medium),Color(255,200,80),TextAlign::TOP_CENTER,"PLAY");
+      it.printf(196,216,id(font_medium),Color(255,255,255),TextAlign::TOP_CENTER,"NEXT");
+
+      it.rectangle(30,254,72,34,Color(70,140,255));
+      it.rectangle(138,254,72,34,Color(70,140,255));
+
+      it.printf(66,258,id(font_large),Color(70,140,255),TextAlign::TOP_CENTER,"-");
+      it.printf(174,258,id(font_large),Color(70,140,255),TextAlign::TOP_CENTER,"+");
+
+touchscreen:
+  - platform: xpt2046
+    id: main_touch
+    spi_id: touch_spi
+    cs_pin: GPIO33
+    interrupt_pin: GPIO36
+    threshold: 400
+    calibration:
+      x_min: 280
+      x_max: 3860
+      y_min: 340
+      y_max: 3860
+    transform:
+      swap_xy: false
+      mirror_x: true
+      mirror_y: false
+
+binary_sensor:
+  - platform: touchscreen
+    name: Sonos Previous
+    x_min: 0
+    x_max: 74
+    y_min: 185
+    y_max: 235
+    on_press:
+      - homeassistant.action:
+          action: media_player.media_previous_track
+          data:
+            entity_id: media_player.arc
+
+  - platform: touchscreen
+    name: Sonos Play
+    x_min: 75
+    x_max: 144
+    y_min: 185
+    y_max: 235
+    on_press:
+      - homeassistant.action:
+          action: media_player.media_play_pause
+          data:
+            entity_id: media_player.arc
+
+  - platform: touchscreen
+    name: Sonos Next
+    x_min: 145
+    x_max: 239
+    y_min: 185
+    y_max: 235
+    on_press:
+      - homeassistant.action:
+          action: media_player.media_next_track
+          data:
+            entity_id: media_player.arc
+
+  - platform: touchscreen
+    name: Sonos Volume Down
+    x_min: 0
+    x_max: 134
+    y_min: 236
+    y_max: 319
+    on_press:
+      - homeassistant.action:
+          action: media_player.volume_down
+          data:
+            entity_id: media_player.arc
+
+  - platform: touchscreen
+    name: Sonos Volume Up
+    x_min: 135
+    x_max: 239
+    y_min: 236
+    y_max: 319
+    on_press:
+      - homeassistant.action:
+          action: media_player.volume_up
+          data:
+            entity_id: media_player.arc
