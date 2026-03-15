@@ -25,30 +25,22 @@ wifi:
 captive_portal:
 
 spi:
-  - id: tft_spi
-    clk_pin: GPIO14
-    mosi_pin: GPIO13
-    miso_pin: GPIO12
-
   - id: touch_spi
     clk_pin: GPIO25
     mosi_pin: GPIO32
     miso_pin: GPIO39
-
 
 output:
   - platform: ledc
     pin: GPIO21
     id: backlight_pwm
 
-
 light:
   - platform: monochromatic
     id: display_backlight
-    name: Display Backlight
+    name: "Display Backlight"
     output: backlight_pwm
     restore_mode: ALWAYS_ON
-
 
 font:
   - file: "gfonts://Roboto"
@@ -61,8 +53,30 @@ font:
 
   - file: "gfonts://Roboto"
     id: font_large
-    size: 30
+    size: 28
 
+display:
+  - platform: mipi_spi
+    id: main_display
+    model: ESP32-2432S028
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: xpt2046
+    id: main_touch
+    spi_id: touch_spi
+    display: main_display
+    cs_pin: GPIO33
+    interrupt_pin: GPIO36
+    threshold: 400
+    calibration:
+      x_min: 280
+      x_max: 3860
+      y_min: 340
+      y_max: 3860
+    transform:
+      swap_xy: true
 
 text_sensor:
   - platform: homeassistant
@@ -70,112 +84,151 @@ text_sensor:
     entity_id: media_player.arc
     attribute: media_title
     internal: true
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: title_label
+            text: !lambda |-
+              std::string s = x;
+              if (s.empty()) return std::string("No title");
+              if (s.size() > 24) s = s.substr(0, 24) + "...";
+              return s;
 
   - platform: homeassistant
     id: sonos_artist
     entity_id: media_player.arc
     attribute: media_artist
     internal: true
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: artist_label
+            text: !lambda |-
+              std::string s = x;
+              if (s.empty()) return std::string("No artist");
+              if (s.size() > 24) s = s.substr(0, 24) + "...";
+              return s;
 
   - platform: homeassistant
     id: sonos_state
     entity_id: media_player.arc
     internal: true
-
-
-display:
-  - platform: mipi_spi
-    id: main_display
-    model: ILI9341
-    spi_id: tft_spi
-    cs_pin: GPIO15
-    dc_pin: GPIO2
-    reset_pin: GPIO4
-    dimensions:
-      width: 240
-      height: 320
-    rotation: 90
-    update_interval: 1s
-
-    lambda: |-
-      it.fill(Color(0,0,0));
-
-      it.printf(10,10,id(font_medium),Color(255,255,255),"Sonos Arc");
-
-      if(id(sonos_title).has_state())
-        it.printf(10,70,id(font_large),Color(255,255,255),"%s",id(sonos_title).state.c_str());
-
-      if(id(sonos_artist).has_state())
-        it.printf(10,110,id(font_medium),Color(0,255,0),"%s",id(sonos_artist).state.c_str());
-
-      if(id(sonos_state).has_state())
-        it.printf(10,40,id(font_small),Color(0,180,255),"State: %s",id(sonos_state).state.c_str());
-
-      it.rectangle(10,200,60,40,Color(255,255,255));
-      it.rectangle(90,200,60,40,Color(255,255,255));
-      it.rectangle(170,200,60,40,Color(255,255,255));
-
-      it.printf(40,220,id(font_small),Color(255,255,255),TextAlign::CENTER,"VOL-");
-      it.printf(120,220,id(font_small),Color(255,255,255),TextAlign::CENTER,"PAUSE");
-      it.printf(200,220,id(font_small),Color(255,255,255),TextAlign::CENTER,"VOL+");
-
-
-touchscreen:
-  - platform: xpt2046
-    id: main_touch
-    spi_id: touch_spi
-    cs_pin: GPIO33
-    interrupt_pin: GPIO36
-    threshold: 400
-
-    calibration:
-      x_min: 280
-      x_max: 3860
-      y_min: 340
-      y_max: 3860
-
-    transform:
-      swap_xy: true
-
-
-binary_sensor:
-  - platform: touchscreen
-    name: Sonos Volume Down
-    x_min: 0
-    x_max: 80
-    y_min: 200
-    y_max: 260
-    on_press:
+    on_value:
       then:
-        - homeassistant.action:
-            action: media_player.volume_down
-            data:
-              entity_id: media_player.arc
+        - lvgl.label.update:
+            id: state_label
+            text: !lambda |-
+              return std::string("State: ") + x;
 
+lvgl:
+  displays:
+    - main_display
+  touchscreens:
+    - main_touch
 
-  - platform: touchscreen
-    name: Sonos Pause
-    x_min: 81
-    x_max: 160
-    y_min: 200
-    y_max: 260
-    on_press:
-      then:
-        - homeassistant.action:
-            action: media_player.media_pause
-            data:
-              entity_id: media_player.arc
+  theme:
+    label:
+      text_color: 0xFFFFFF
+      bg_opa: TRANSP
 
+  pages:
+    - id: main_page
+      bg_color: 0x000000
+      widgets:
+        - label:
+            id: header_label
+            x: 10
+            y: 8
+            text_font: font_medium
+            text: "Sonos Arc"
 
-  - platform: touchscreen
-    name: Sonos Volume Up
-    x_min: 161
-    x_max: 240
-    y_min: 200
-    y_max: 260
-    on_press:
-      then:
-        - homeassistant.action:
-            action: media_player.volume_up
-            data:
-              entity_id: media_player.arc
+        - label:
+            id: state_label
+            x: 10
+            y: 36
+            text_font: font_small
+            text_color: 0x33B5FF
+            text: "State: unavailable"
+
+        - label:
+            id: title_label
+            x: 10
+            y: 78
+            width: 220
+            text_font: font_large
+            text: "No title"
+
+        - label:
+            id: artist_label
+            x: 10
+            y: 116
+            width: 220
+            text_font: font_medium
+            text_color: 0x33FF66
+            text: "No artist"
+
+        - button:
+            id: btn_prev
+            x: 8
+            y: 185
+            width: 68
+            height: 42
+            radius: 6
+            bg_color: 0x202020
+            border_width: 2
+            border_color: 0xFFFFFF
+            on_click:
+              then:
+                - homeassistant.action:
+                    action: media_player.volume_down
+                    data:
+                      entity_id: media_player.arc
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_small
+                  text: "VOL-"
+
+        - button:
+            id: btn_pause
+            x: 86
+            y: 185
+            width: 68
+            height: 42
+            radius: 6
+            bg_color: 0x202020
+            border_width: 2
+            border_color: 0xFFFFFF
+            on_click:
+              then:
+                - homeassistant.action:
+                    action: media_player.media_pause
+                    data:
+                      entity_id: media_player.arc
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_small
+                  text: "PAUSE"
+
+        - button:
+            id: btn_next
+            x: 164
+            y: 185
+            width: 68
+            height: 42
+            radius: 6
+            bg_color: 0x202020
+            border_width: 2
+            border_color: 0xFFFFFF
+            on_click:
+              then:
+                - homeassistant.action:
+                    action: media_player.volume_up
+                    data:
+                      entity_id: media_player.arc
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: font_small
+                  text: "VOL+"
