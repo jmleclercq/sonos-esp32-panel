@@ -1,21 +1,5 @@
 # ESP32 Sonos Touch Panel
 
-<p align="center">
-<img src="https://img.shields.io/badge/ESP32-Sunton%202.8%22-blue?logo=espressif" />
-<img src="https://img.shields.io/badge/ESPHome-supported-000000?logo=esphome" />
-<img src="https://img.shields.io/badge/Home%20Assistant-integrated-41BDF5?logo=homeassistant" />
-<img src="https://img.shields.io/badge/Sonos-controller-black?logo=sonos" />
-<img src="https://img.shields.io/badge/License-MIT-green" />
-
-</p>
-
-<p align="center">
-Dedicated Sonos touchscreen controller using an ESP32 Sunton display and ESPHome.
-</p>
-
-
-# ESP32 Sonos Touch Panel
-
 ![ESPHome](https://img.shields.io/badge/ESPHome-supported-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5)
 ![ESP32](https://img.shields.io/badge/ESP32-supported-orange)
