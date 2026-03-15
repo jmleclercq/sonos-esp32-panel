@@ -2,11 +2,13 @@
 
 <p align="center">
 
+>>>>>>> 8f66df6 (Fix README formatting and badges)
 <img src="https://img.shields.io/badge/ESP32-Sunton%202.8%22-blue?logo=espressif" />
 <img src="https://img.shields.io/badge/ESPHome-supported-000000?logo=esphome" />
 <img src="https://img.shields.io/badge/Home%20Assistant-integrated-41BDF5?logo=homeassistant" />
 <img src="https://img.shields.io/badge/Sonos-controller-black?logo=sonos" />
 <img src="https://img.shields.io/badge/License-MIT-green" />
+<<<<<<< HEAD
 
 </p>
 
@@ -19,130 +21,196 @@ Dedicated Sonos touchscreen controller using an ESP32 Sunton display and ESPHome
 
 A stable ESPHome project for a Sunton ESP32 2.8" touchscreen display used as a dedicated Sonos controller in Home Assistant.
 
-This repository documents the first stable working version before visual improvements.
+</p>
+>>>>>>> 8f66df6 (Fix README formatting and badges)
 
-## Stable features
+<p align="center">
+Dedicated Sonos touchscreen controller using a Sunton ESP32 display and ESPHome.
+</p>
 
-- Sonos state display
-- Track title display
-- Artist display
-- Touch controls:
-  - Previous track
-  - Play / Pause
-  - Next track
-  - Volume down
-  - Volume up
-- Unicode cleanup for Sonos metadata
-- Stable touchscreen mapping
-- Stable portrait layout
+--------------------------------------------------
 
-## Hardware
+OVERVIEW
+
+This project implements a dedicated Sonos controller using a Sunton ESP32-2432S028 2.8" touchscreen display with ESPHome integrated into Home Assistant.
+
+The panel displays:
+
+- Sonos playback state
+- Track title
+- Artist name
+
+Touch controls:
+
+- Previous track
+- Play / Pause
+- Next track
+- Volume down
+- Volume up
+
+This repository documents the first stable version of the project.
+
+--------------------------------------------------
+
+HARDWARE
 
 Tested with:
 
-- Sunton ESP32-2432S028
-- 2.8" TFT screen
-- XPT2046 touchscreen controller
+Sunton ESP32-2432S028
 
-## Software stack
+Features:
+
+- ESP32 microcontroller
+- 2.8" TFT display
+- XPT2046 touchscreen controller
+- SPI display interface
+
+--------------------------------------------------
+
+SOFTWARE STACK
 
 - ESPHome
 - Home Assistant
-- ESP-IDF
+- ESP-IDF framework
 
-## Project structure
+--------------------------------------------------
+
+PROJECT STRUCTURE
 
 .
 ├── README.md
 ├── TROUBLESHOOTING.md
 └── esphome
-    └── sunton-28-sonos-panel.yaml
+    ├── sunton-2432s028r-sonos.yaml
+    └── secrets.example.yaml
 
-## Main configuration file
+--------------------------------------------------
 
-esphome/sunton-28-sonos-panel.yaml
+ESPHOME CONFIGURATION
 
-## Home Assistant entity used
+Main configuration file:
 
-This version is configured for:
+esphome/sunton-2432s028r-sonos.yaml
+
+This file includes:
+
+- display configuration
+- touchscreen calibration
+- Sonos Home Assistant integration
+- Unicode text normalization
+- touch button mapping
+
+--------------------------------------------------
+
+HOME ASSISTANT ENTITY
+
+The configuration uses the Sonos entity:
 
 media_player.arc
 
-If your Sonos entity has a different name, replace every occurrence of:
+If your entity has a different name, replace every occurrence of media_player.arc inside the YAML file.
 
-media_player.arc
+--------------------------------------------------
 
-in the YAML.
+CONFIGURATION
 
-## Stable interface layout
+Copy the example secrets file:
 
-Top area:
+cp esphome/secrets.example.yaml esphome/secrets.yaml
+
+Edit the file with your WiFi credentials:
+
+wifi_ssid: "YOUR_WIFI"
+wifi_password: "YOUR_PASSWORD"
+
+--------------------------------------------------
+
+INTERFACE LAYOUT
+
+Top section
+
 - SONOS ARC header
-- state
-- title
+- playback state
+- track title
 - artist
 
-Bottom area:
-- PREV / PLAY / NEXT
-- volume - / +
+Bottom section
 
-## Important notes
+- PREV | PLAY | NEXT
+- volume - | volume +
 
-### 1. This is the stable reference version
+Touching these areas sends commands to Home Assistant.
 
-This version is intentionally frozen because:
+--------------------------------------------------
 
-- the display works
-- the touchscreen mapping works
+NOTES
+
+Stable reference version
+
+This repository represents a stable working baseline:
+
+- display works correctly
+- touchscreen mapping works
 - Sonos commands work
-- text normalization is good enough for daily use
+- text normalization handles most metadata issues
 
-Future improvements should be built from this version.
+Future improvements should build from this version.
 
-### 2. Unicode cleanup
+--------------------------------------------------
 
-Some Sonos metadata may contain typographic apostrophes or accented characters that do not render perfectly on ESPHome fonts.
+UNICODE HANDLING
 
-A normalization function is included to reduce these display issues.
+Sonos metadata sometimes contains typographic characters such as apostrophes or accents.
 
-### 3. GPIO warnings
+The YAML includes a normalization function to reduce display artifacts.
 
-ESPHome may warn that some GPIOs are strapping pins, especially GPIO12.
+--------------------------------------------------
 
-This is expected on this board and does not prevent the project from working with the current setup.
+GPIO WARNINGS
 
-## Flashing from Home Assistant
+ESPHome may warn about strapping pins (GPIO12).
 
-1. Copy the YAML into:
+This is expected on this board and does not affect normal operation.
 
-/config/esphome/sunton-28-sonos-panel.yaml
+--------------------------------------------------
 
-2. Make sure your ESPHome secrets are available:
-- wifi_ssid
-- wifi_password
+FLASHING
 
-3. Install or update the device from ESPHome Builder.
+1. Copy the YAML file to your ESPHome configuration folder:
 
-## Git workflow used for this stable version
+/config/esphome/sunton-2432s028r-sonos.yaml
+
+2. Ensure secrets are configured.
+
+3. Install the device from ESPHome Builder in Home Assistant.
+
+--------------------------------------------------
+
+GIT WORKFLOW
 
 Typical workflow:
 
 git add .
-git commit -m "Stable version: Sonos ESP32 touch panel working"
+git commit -m "Update configuration"
 git push
 
-## Roadmap
+--------------------------------------------------
 
-Planned future improvements after this stable checkpoint:
+ROADMAP
 
-- better UI design
-- improved text handling for long titles
-- volume bar
+Planned improvements:
+
+- improved UI
+- better handling of long titles
+- volume slider
 - album artwork
 - LVGL interface
-- sleep mode
-- auto brightness
+- screen sleep mode
+- automatic brightness
 
-## License
+--------------------------------------------------
+
+LICENSE
 
 MIT
+
