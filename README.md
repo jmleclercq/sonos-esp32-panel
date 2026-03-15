@@ -7,7 +7,7 @@
 
 A standalone **ESP32 touchscreen controller for Sonos**, powered by **ESPHome** and integrated with **Home Assistant**.
 
-![Sonos Touch Panel](images/sonos-touch-panel.jpg)
+![Sonos Touch Panel](images/sonos-touch-panel.png)
 
 --------------------------------------------------
 
