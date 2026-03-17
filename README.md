@@ -16,59 +16,48 @@
   <img src="images/screen.jpeg" width="420" alt="Stable Sonos touch panel result">
 </p>
 
----
-
 ## Overview
 
-This project implements a dedicated Sonos controller using a **Sunton ESP32-2432S028 2.8" touchscreen display** with **ESPHome** integrated into **Home Assistant**.
+This project implements a dedicated Sonos controller using a Sunton ESP32-2432S028 2.8 inch touchscreen display with ESPHome integrated into Home Assistant.
 
 The panel displays:
-
 - Sonos playback state
 - Track title
 - Artist name
 
-And provides touch controls for:
-
+It also provides touch controls for:
 - Previous track
 - Play / Pause
 - Next track
 - Volume down
 - Volume up
 
-This repository documents the **first stable working version** of the project.
-
----
+This repository documents the stable working version of the project.
 
 ## Proven result
 
 The screenshot above shows the current stable interface running on the device after installation and configuration.
 
-Current stable status:
-
+Stable status:
 - display fully working
 - touchscreen mapping working
 - Sonos controls working
 - title and artist display working
 - long-title handling working
 - accent handling stabilized enough for daily use
-
----
+- sleep mode with clock working
+- touch wake working
 
 ## Hardware
 
 Tested with:
+- Sunton ESP32-2432S028
 
-**Sunton ESP32-2432S028**
-
-Features:
-
+Main features:
 - ESP32 microcontroller
-- 2.8" TFT display
+- 2.8 inch TFT display
 - XPT2046 touchscreen controller
 - integrated SPI display interface
-
----
 
 ## Software stack
 
@@ -76,11 +65,10 @@ Features:
 - Home Assistant
 - ESP-IDF framework
 
----
-
 ## Project structure
 
     .
+    ├── LICENSE
     ├── README.md
     ├── TROUBLESHOOTING.md
     ├── images
@@ -89,8 +77,6 @@ Features:
         ├── sunton-2432s028r-sonos.yaml
         └── secrets.example.yaml
 
----
-
 ## ESPHome configuration
 
 Main configuration file:
@@ -98,14 +84,13 @@ Main configuration file:
     esphome/sunton-2432s028r-sonos.yaml
 
 This file contains:
-
 - display configuration
 - touchscreen calibration
 - Sonos Home Assistant integration
 - Unicode text normalization
 - touch button mapping
-
----
+- standby clock
+- screen sleep and wake handling
 
 ## Home Assistant entity
 
@@ -119,8 +104,6 @@ If your Sonos entity has a different name, replace all occurrences of:
 
 inside the YAML configuration.
 
----
-
 ## Configuration
 
 Copy the example secrets file:
@@ -132,52 +115,49 @@ Then edit it with your WiFi credentials:
     wifi_ssid: "YOUR_WIFI"
     wifi_password: "YOUR_PASSWORD"
 
----
-
 ## Interface layout
 
-Top section:
-
+Normal mode:
 - SONOS ARC header
 - playback state
 - track title
 - artist
+- PREV / PLAY / NEXT
+- volume minus / plus
 
-Bottom section:
+Standby mode:
+- low brightness clock
+- date
+- touch to wake
 
-- PREV | PLAY | NEXT
-- volume - | volume +
+## Power supply
 
-Touching these areas sends commands to Home Assistant.
+For battery usage, the simplest and most reliable option is to use a standard USB power bank.
 
----
+Advantages:
+- no custom wiring
+- safe and stable
+- easy to recharge
+- no dedicated battery electronics required
+
+A custom 18650 battery power design is possible, but it is not developed in this project.
 
 ## Notes
 
-### Stable reference version
-
-This repository represents a **stable working baseline**:
-
+Stable reference version:
 - display works correctly
 - touchscreen mapping works
 - Sonos commands work
 - text normalization handles most metadata issues
+- sleep mode works without changing touch zones
 
-Future improvements should build from this version.
-
-### Unicode handling
-
+Unicode handling:
 Sonos metadata sometimes contains typographic characters such as apostrophes or accents.
-
 The YAML includes a normalization function to reduce display artifacts.
 
-### GPIO warnings
-
-ESPHome may warn about strapping pins such as **GPIO12**.
-
+GPIO warnings:
+ESPHome may warn about strapping pins such as GPIO12.
 This is expected on this board and does not affect normal operation.
-
----
 
 ## Flashing
 
@@ -187,9 +167,7 @@ This is expected on this board and does not affect normal operation.
 
 2. Ensure secrets are configured.
 
-3. Install the device from **ESPHome Builder** in Home Assistant.
-
----
+3. Install the device from ESPHome Builder in Home Assistant.
 
 ## Git workflow
 
@@ -199,21 +177,16 @@ Typical workflow:
     git commit -m "Update configuration"
     git push
 
----
-
 ## Roadmap
 
 Planned future improvements:
-
-- screen sleep mode
-- wake on touch
-- refined UI polish
+- screen auto brightness
+- wake/sleep refinements if needed
 - optional volume indicator
 - optional LVGL version later
 
-At this stage, no further functional changes are required for the stable version.
-
----
+At this stage, the project intentionally keeps the current stable battery guidance simple:
+use a USB power bank rather than a dedicated battery circuit.
 
 ## License
 

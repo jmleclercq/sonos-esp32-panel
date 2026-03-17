@@ -1,6 +1,16 @@
 esphome:
   name: sunton-28-sonos-panel
   friendly_name: Sunton Sonos Panel
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          id(last_touch_ms) = millis();
+          id(screen_sleeping) = false;
+          id(just_woke) = false;
+      - light.turn_on:
+          id: display_backlight
+          brightness: 100%
 
 esp32:
   board: esp32dev
@@ -22,6 +32,10 @@ captive_portal:
 
 web_server:
 
+time:
+  - platform: homeassistant
+    id: ha_time
+
 globals:
   - id: title_line_1
     type: std::string
@@ -42,6 +56,21 @@ globals:
     type: std::string
     restore_value: no
     initial_value: '""'
+
+  - id: last_touch_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
+  - id: screen_sleeping
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: just_woke
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
 spi:
   - id: tft_spi
@@ -65,6 +94,7 @@ light:
     name: Display Backlight
     id: display_backlight
     restore_mode: ALWAYS_ON
+    default_transition_length: 0s
 
 font:
   - file: "gfonts://Roboto"
@@ -81,6 +111,46 @@ font:
     id: font_large
     size: 26
     glyphs: "!%()+,-./0123456789:;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_°?àâäæçèéêëîïôöœùûüÿÀÂÄÆÇÈÉÊËÎÏÔÖŒÙÛÜŸ'’ "
+
+  - file: "gfonts://Roboto"
+    id: font_clock
+    size: 48
+    glyphs: "0123456789:"
+
+script:
+  - id: enter_sleep_mode
+    mode: restart
+    then:
+      - lambda: |-
+          id(screen_sleeping) = true;
+          id(just_woke) = false;
+      - light.turn_on:
+          id: display_backlight
+          brightness: 30%
+
+  - id: wake_screen_only
+    mode: restart
+    then:
+      - lambda: |-
+          id(last_touch_ms) = millis();
+          if (id(screen_sleeping)) {
+            id(screen_sleeping) = false;
+            id(just_woke) = true;
+          }
+      - light.turn_on:
+          id: display_backlight
+          brightness: 100%
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          const uint32_t timeout_ms = 60000;
+          const uint32_t now = millis();
+
+          if (!id(screen_sleeping) && (now - id(last_touch_ms) > timeout_ms)) {
+            id(enter_sleep_mode).execute();
+          }
 
 text_sensor:
   - platform: homeassistant
@@ -137,7 +207,7 @@ text_sensor:
             std::string title = normalize(id(sonos_title).state.c_str());
 
             if (title.length() > 18) {
-              id(title_line_1) = title.substr(0, 18);
+              id(title_line_1) = title.substr(0,18);
               id(title_line_2) = title.substr(18);
             } else {
               id(title_line_1) = title;
@@ -151,54 +221,10 @@ text_sensor:
     on_value:
       then:
         - lambda: |-
-            auto normalize = [](std::string s) -> std::string {
-              auto repl=[&](std::string a,std::string b){
-                size_t pos=0;
-                while((pos=s.find(a,pos))!=std::string::npos){
-                  s.replace(pos,a.length(),b);
-                  pos+=b.length();
-                }
-              };
-
-              repl("’","'");
-              repl("‘","'");
-              repl("`","'");
-              repl("´","'");
-
-              repl("à","a"); repl("â","a"); repl("ä","a");
-              repl("À","A"); repl("Â","A"); repl("Ä","A");
-
-              repl("é","e"); repl("è","e"); repl("ê","e"); repl("ë","e");
-              repl("É","E"); repl("È","E"); repl("Ê","E"); repl("Ë","E");
-
-              repl("î","i"); repl("ï","i");
-              repl("Î","I"); repl("Ï","I");
-
-              repl("ô","o"); repl("ö","o");
-              repl("Ô","O"); repl("Ö","O");
-
-              repl("ù","u"); repl("û","u"); repl("ü","u");
-              repl("Ù","U"); repl("Û","U"); repl("Ü","U");
-
-              repl("ÿ","y");
-              repl("Ÿ","Y");
-
-              repl("ç","c");
-              repl("Ç","C");
-
-              repl("œ","oe");
-              repl("Œ","OE");
-
-              repl("æ","ae");
-              repl("Æ","AE");
-
-              return s;
-            };
-
-            std::string artist = normalize(id(sonos_artist).state.c_str());
+            std::string artist = id(sonos_artist).state.c_str();
 
             if (artist.length() > 20) {
-              id(artist_line_1) = artist.substr(0, 20);
+              id(artist_line_1) = artist.substr(0,20);
               id(artist_line_2) = artist.substr(20);
             } else {
               id(artist_line_1) = artist;
@@ -218,33 +244,120 @@ display:
     reset_pin: GPIO4
     update_interval: 1s
     lambda: |-
-      it.fill(Color(10,12,20));
+      if (id(screen_sleeping)) {
+        Color bg(4, 6, 12);
+        Color border(24, 30, 48);
+        Color clock_col(110, 175, 255);
+        Color soft(90, 110, 150);
 
-      it.filled_rectangle(0,0,240,34,Color(45,55,95));
-      it.printf(120,6,id(font_large),Color(255,255,255),TextAlign::TOP_CENTER,"SONOS ARC");
+        it.fill(bg);
+        it.rectangle(6, 6, 228, 308, border);
 
-      it.rectangle(18,46,96,28,Color(80,220,220));
-      it.printf(66,52,id(font_medium),Color(80,220,220),TextAlign::TOP_CENTER,"%s",id(sonos_state).state.c_str());
+        auto now = id(ha_time).now();
+        if (now.is_valid()) {
+          it.strftime(120, 110, id(font_clock), clock_col, TextAlign::TOP_CENTER, "%H:%M", now);
+          it.strftime(120, 170, id(font_medium), soft, TextAlign::TOP_CENTER, "%d/%m/%Y", now);
+        } else {
+          it.printf(120, 118, id(font_large), clock_col, TextAlign::TOP_CENTER, "--:--");
+          it.printf(120, 170, id(font_medium), soft, TextAlign::TOP_CENTER, "Waiting for time");
+        }
 
-      it.printf(18,90,id(font_large),Color(255,255,255),"%s",id(title_line_1).c_str());
-      it.printf(18,118,id(font_large),Color(255,255,255),"%s",id(title_line_2).c_str());
+        it.printf(120, 250, id(font_small), soft, TextAlign::TOP_CENTER, "Touch screen to wake");
+        return;
+      }
 
-      it.printf(18,160,id(font_large),Color(120,255,160),"%s",id(artist_line_1).c_str());
-      it.printf(18,186,id(font_large),Color(120,255,160),"%s",id(artist_line_2).c_str());
+      Color bg(6, 8, 14);
+      Color shell(12, 15, 24);
+      Color panel(18, 22, 34);
+      Color panel_alt(22, 28, 42);
 
-      it.rectangle(12,208,64,34,Color(255,255,255));
-      it.rectangle(88,208,64,34,Color(255,200,80));
-      it.rectangle(164,208,64,34,Color(255,255,255));
+      Color header_dark(42, 52, 92);
+      Color header_light(78, 94, 156);
+      Color header_glow(118, 136, 214);
 
-      it.printf(44,216,id(font_medium),Color(255,255,255),TextAlign::TOP_CENTER,"PREV");
-      it.printf(120,216,id(font_medium),Color(255,200,80),TextAlign::TOP_CENTER,"PLAY");
-      it.printf(196,216,id(font_medium),Color(255,255,255),TextAlign::TOP_CENTER,"NEXT");
+      Color white(255, 255, 255);
+      Color soft_white(225, 232, 245);
+      Color muted(110, 120, 145);
 
-      it.rectangle(30,254,72,34,Color(70,140,255));
-      it.rectangle(138,254,72,34,Color(70,140,255));
+      Color cyan(90, 220, 230);
+      Color green(120, 255, 160);
+      Color amber(255, 190, 80);
+      Color blue(70, 140, 255);
 
-      it.printf(66,258,id(font_large),Color(70,140,255),TextAlign::TOP_CENTER,"-");
-      it.printf(174,258,id(font_large),Color(70,140,255),TextAlign::TOP_CENTER,"+");
+      Color btn_dark(18, 22, 34);
+      Color btn_blue_fill(14, 24, 48);
+      Color btn_play_fill(52, 40, 18);
+
+      Color state_fill(20, 46, 58);
+      Color state_border = cyan;
+      Color state_text = cyan;
+
+      if (id(sonos_state).state == "playing") {
+        state_fill = Color(18, 58, 42);
+        state_border = Color(110, 255, 180);
+        state_text = Color(110, 255, 180);
+      } else if (id(sonos_state).state == "paused") {
+        state_fill = Color(60, 46, 18);
+        state_border = amber;
+        state_text = amber;
+      } else if (id(sonos_state).state == "idle") {
+        state_fill = Color(38, 42, 52);
+        state_border = muted;
+        state_text = soft_white;
+      }
+
+      it.fill(bg);
+
+      it.filled_rectangle(4, 4, 232, 312, shell);
+      it.rectangle(4, 4, 232, 312, Color(34, 40, 60));
+
+      it.filled_rectangle(10, 10, 220, 36, header_dark);
+      it.filled_rectangle(10, 10, 220, 12, header_light);
+      it.line(10, 46, 229, 46, header_glow);
+      it.printf(120, 14, id(font_large), white, TextAlign::TOP_CENTER, "SONOS ARC");
+
+      it.filled_rectangle(18, 58, 110, 30, state_fill);
+      it.rectangle(18, 58, 110, 30, state_border);
+      it.printf(73, 64, id(font_medium), state_text, TextAlign::TOP_CENTER, "%s", id(sonos_state).state.c_str());
+
+      it.line(148, 73, 220, 73, muted);
+      it.line(148, 74, 220, 74, Color(55, 62, 86));
+
+      it.filled_rectangle(14, 98, 212, 64, panel);
+      it.rectangle(14, 98, 212, 64, Color(70, 80, 108));
+      it.line(14, 98, 225, 98, Color(102, 114, 150));
+      it.printf(22, 106, id(font_large), white, "%s", id(title_line_1).c_str());
+      it.printf(22, 132, id(font_large), white, "%s", id(title_line_2).c_str());
+
+      it.filled_rectangle(14, 170, 212, 50, panel_alt);
+      it.rectangle(14, 170, 212, 50, Color(70, 80, 108));
+      it.printf(22, 178, id(font_large), green, "%s", id(artist_line_1).c_str());
+      it.printf(22, 202, id(font_large), green, "%s", id(artist_line_2).c_str());
+
+      it.filled_rectangle(12, 226, 64, 34, btn_dark);
+      it.rectangle(12, 226, 64, 34, soft_white);
+      it.line(12, 226, 75, 226, Color(255, 255, 255));
+      it.printf(44, 234, id(font_medium), soft_white, TextAlign::TOP_CENTER, "PREV");
+
+      it.filled_rectangle(88, 226, 64, 34, btn_play_fill);
+      it.rectangle(88, 226, 64, 34, amber);
+      it.line(88, 226, 151, 226, Color(255, 220, 120));
+      it.printf(120, 234, id(font_medium), amber, TextAlign::TOP_CENTER, "PLAY");
+
+      it.filled_rectangle(164, 226, 64, 34, btn_dark);
+      it.rectangle(164, 226, 64, 34, soft_white);
+      it.line(164, 226, 227, 226, Color(255, 255, 255));
+      it.printf(196, 234, id(font_medium), soft_white, TextAlign::TOP_CENTER, "NEXT");
+
+      it.filled_rectangle(30, 270, 72, 36, btn_blue_fill);
+      it.rectangle(30, 270, 72, 36, blue);
+      it.line(30, 270, 101, 270, Color(110, 175, 255));
+      it.printf(66, 274, id(font_large), blue, TextAlign::TOP_CENTER, "-");
+
+      it.filled_rectangle(138, 270, 72, 36, btn_blue_fill);
+      it.rectangle(138, 270, 72, 36, blue);
+      it.line(138, 270, 209, 270, Color(110, 175, 255));
+      it.printf(174, 274, id(font_large), blue, TextAlign::TOP_CENTER, "+");
 
 touchscreen:
   - platform: xpt2046
@@ -262,6 +375,15 @@ touchscreen:
       swap_xy: false
       mirror_x: true
       mirror_y: false
+    on_touch:
+      then:
+        - lambda: |-
+            id(last_touch_ms) = millis();
+        - if:
+            condition:
+              lambda: 'return id(screen_sleeping);'
+            then:
+              - script.execute: wake_screen_only
 
 binary_sensor:
   - platform: touchscreen
@@ -271,10 +393,17 @@ binary_sensor:
     y_min: 185
     y_max: 235
     on_press:
-      - homeassistant.action:
-          action: media_player.media_previous_track
-          data:
-            entity_id: media_player.arc
+      - if:
+          condition:
+            lambda: 'return id(just_woke);'
+          then:
+            - lambda: 'id(just_woke) = false;'
+          else:
+            - lambda: 'id(last_touch_ms) = millis();'
+            - homeassistant.action:
+                action: media_player.media_previous_track
+                data:
+                  entity_id: media_player.arc
 
   - platform: touchscreen
     name: Sonos Play
@@ -283,10 +412,17 @@ binary_sensor:
     y_min: 185
     y_max: 235
     on_press:
-      - homeassistant.action:
-          action: media_player.media_play_pause
-          data:
-            entity_id: media_player.arc
+      - if:
+          condition:
+            lambda: 'return id(just_woke);'
+          then:
+            - lambda: 'id(just_woke) = false;'
+          else:
+            - lambda: 'id(last_touch_ms) = millis();'
+            - homeassistant.action:
+                action: media_player.media_play_pause
+                data:
+                  entity_id: media_player.arc
 
   - platform: touchscreen
     name: Sonos Next
@@ -295,10 +431,17 @@ binary_sensor:
     y_min: 185
     y_max: 235
     on_press:
-      - homeassistant.action:
-          action: media_player.media_next_track
-          data:
-            entity_id: media_player.arc
+      - if:
+          condition:
+            lambda: 'return id(just_woke);'
+          then:
+            - lambda: 'id(just_woke) = false;'
+          else:
+            - lambda: 'id(last_touch_ms) = millis();'
+            - homeassistant.action:
+                action: media_player.media_next_track
+                data:
+                  entity_id: media_player.arc
 
   - platform: touchscreen
     name: Sonos Volume Down
@@ -307,10 +450,17 @@ binary_sensor:
     y_min: 236
     y_max: 319
     on_press:
-      - homeassistant.action:
-          action: media_player.volume_down
-          data:
-            entity_id: media_player.arc
+      - if:
+          condition:
+            lambda: 'return id(just_woke);'
+          then:
+            - lambda: 'id(just_woke) = false;'
+          else:
+            - lambda: 'id(last_touch_ms) = millis();'
+            - homeassistant.action:
+                action: media_player.volume_down
+                data:
+                  entity_id: media_player.arc
 
   - platform: touchscreen
     name: Sonos Volume Up
@@ -319,7 +469,14 @@ binary_sensor:
     y_min: 236
     y_max: 319
     on_press:
-      - homeassistant.action:
-          action: media_player.volume_up
-          data:
-            entity_id: media_player.arc
+      - if:
+          condition:
+            lambda: 'return id(just_woke);'
+          then:
+            - lambda: 'id(just_woke) = false;'
+          else:
+            - lambda: 'id(last_touch_ms) = millis();'
+            - homeassistant.action:
+                action: media_player.volume_up
+                data:
+                  entity_id: media_player.arc
