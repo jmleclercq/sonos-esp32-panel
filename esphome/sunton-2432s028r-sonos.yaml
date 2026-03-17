@@ -145,8 +145,12 @@ interval:
   - interval: 1s
     then:
       - lambda: |-
-          const uint32_t timeout_ms = 60000;
+          const uint32_t timeout_ms = 30000;
           const uint32_t now = millis();
+
+          if (id(sonos_state).state == "playing") {
+            return;
+          }
 
           if (!id(screen_sleeping) && (now - id(last_touch_ms) > timeout_ms)) {
             id(enter_sleep_mode).execute();

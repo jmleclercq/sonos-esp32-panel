@@ -47,6 +47,8 @@ Stable status:
 - accent handling stabilized enough for daily use
 - sleep mode with clock working
 - touch wake working
+- no sleep while music is playing
+- sleep after 30 seconds when playback is not active
 
 ## Hardware
 
@@ -129,6 +131,10 @@ Standby mode:
 - low brightness clock
 - date
 - touch to wake
+
+Sleep logic:
+- screen stays awake while Sonos is playing
+- screen sleeps after 30 seconds only when Sonos is not playing
 
 ## Power supply
 
