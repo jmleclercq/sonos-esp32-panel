@@ -2,14 +2,12 @@
 
 This document lists common issues encountered with the ESP32 Sonos Touch Panel and how to fix them.
 
----
-
 ## Screen stays white
 
 Possible causes:
 - wrong display model
 - SPI misconfiguration
-- incorrect wiring (if not using original board)
+- incorrect wiring if not using the original board
 
 Solutions:
 - ensure model is set to:
@@ -18,9 +16,7 @@ Solutions:
       CLK  = GPIO14
       MOSI = GPIO13
       MISO = GPIO12
-- check power supply (5V stable)
-
----
+- check power supply with stable 5V
 
 ## Touchscreen not working
 
@@ -40,8 +36,6 @@ Solutions:
 - check transform:
       mirror_x / mirror_y
 
----
-
 ## Touch works but buttons are not aligned
 
 Cause:
@@ -58,8 +52,6 @@ Tip:
 - use logs to read raw touch values
 - press corners of the screen to calibrate
 
----
-
 ## Buttons trigger wrong actions
 
 Cause:
@@ -71,10 +63,8 @@ Fix:
   inside binary_sensor blocks
 
 Important:
-- do NOT change display layout if everything works
+- do not change display layout if everything works
 - only adjust touch zones
-
----
 
 ## Screen does not wake properly
 
@@ -89,8 +79,6 @@ Fix:
 - ensure debounce logic with:
       just_woke flag
 
----
-
 ## Screen goes black instead of showing clock
 
 Cause:
@@ -103,8 +91,6 @@ Fix:
 Typical working range:
 - 25% to 40%
 
----
-
 ## Clock appears briefly then disappears
 
 Cause:
@@ -116,24 +102,39 @@ Fix:
 
 - increase brightness
 
----
+## Screen never sleeps
 
-## Weird characters (squares, accents issues)
+Cause:
+- Sonos state is still:
+      playing
+
+Explanation:
+- this is expected behavior in the current stable version
+- the panel is designed to stay awake while music is playing
+
+## Screen sleeps too soon after pause
+
+Cause:
+- no touch activity since playback stopped
+
+Explanation:
+- the current logic sleeps after 30 seconds when Sonos is not playing
+- this is intended behavior
+
+## Weird characters or accent issues
 
 Cause:
 - unsupported glyphs in font
 - Sonos metadata contains special characters
 
 Fix:
-- use normalized text (already implemented)
-- ensure glyph list includes:
-      apostrophe ' and ’
-- remove unsupported Unicode characters
+- use normalized text already implemented in YAML
+- ensure glyph list includes apostrophes:
+      '
+      ’
 
 Note:
 - Sonos sometimes sends typographic apostrophes
-
----
 
 ## Text display glitches
 
@@ -142,13 +143,11 @@ Cause:
 
 Fix:
 - text is split into 2 lines automatically
-- keep limits:
+- current limits are:
       title: 18 chars
       artist: 20 chars
 
----
-
-## Display is slow (warnings in logs)
+## Display is slow warnings in logs
 
 Message:
       display took a long time
@@ -159,8 +158,6 @@ Cause:
 Status:
 - normal behavior
 - no action required
-
----
 
 ## GPIO12 warning
 
@@ -174,8 +171,6 @@ Explanation:
 Action:
 - ignore warning
 
----
-
 ## Sonos not responding
 
 Check:
@@ -187,8 +182,6 @@ Default:
 Fix:
 - replace with your own entity if needed
 
----
-
 ## WiFi issues
 
 Check:
@@ -197,8 +190,6 @@ Check:
 Verify:
       wifi_ssid
       wifi_password
-
----
 
 ## Power issues
 
@@ -212,13 +203,11 @@ Fix:
 - or USB power bank
 
 Note:
-Using a power bank is the simplest and recommended solution for portable use.
-
----
+- using a power bank is the simplest and recommended solution for portable use
+- a dedicated battery circuit is not part of this project
 
 ## General advice
 
-- if everything works: DO NOT modify working parts
+- if everything works, do not modify working parts
 - change only one thing at a time
 - always keep a backup of your stable YAML
-
