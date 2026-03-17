@@ -1,155 +1,224 @@
 # Troubleshooting
 
-This file documents the main issues encountered while building the Sonos ESP32 touch panel and the solutions that led to the current stable version.
+This document lists common issues encountered with the ESP32 Sonos Touch Panel and how to fix them.
 
 ---
 
-## 1. Display worked but had blue bands / wrong rendering
+## Screen stays white
 
-### Symptoms
-- blue vertical band
-- partial display
-- mirrored or reversed text
-- white screen after some display model changes
+Possible causes:
+- wrong display model
+- SPI misconfiguration
+- incorrect wiring (if not using original board)
 
-### Cause
-The display driver and board preset needed to match the real Sunton board behavior.
-
-### Stable solution
-Use:
-
-- platform: mipi_spi
-- model: ESP32-2432S028
-
-This fixed the display layout and removed the blue-band issue in the stable version.
+Solutions:
+- ensure model is set to:
+      ESP32-2432S028
+- verify SPI pins:
+      CLK  = GPIO14
+      MOSI = GPIO13
+      MISO = GPIO12
+- check power supply (5V stable)
 
 ---
 
-## 2. Touchscreen worked in logs but buttons were triggered in the wrong place
+## Touchscreen not working
 
-### Symptoms
-- touch events appeared in logs
-- visible buttons did not match actual touch zones
-- PREV / NEXT and volume buttons could be inverted
+Possible causes:
+- incorrect SPI config for touch
+- bad calibration values
+- wrong transform
 
-### Cause
-Touchscreen calibration and axis transform did not initially match the final portrait display orientation.
-
-### Stable solution
-Use the final stable touchscreen transform:
-
-transform:
-  swap_xy: false
-  mirror_x: true
-  mirror_y: false
-
-and keep the final working button coordinates from the stable YAML.
+Solutions:
+- verify touch SPI:
+      CLK  = GPIO25
+      MOSI = GPIO32
+      MISO = GPIO39
+- adjust calibration:
+      x_min / x_max
+      y_min / y_max
+- check transform:
+      mirror_x / mirror_y
 
 ---
 
-## 3. Buttons triggered the wrong Sonos action
+## Touch works but buttons are not aligned
 
-### Symptoms
-- touching one button triggered another action
-- volume up / volume down inverted
-- previous / next inverted
+Cause:
+- calibration mismatch
 
-### Cause
-Display layout and touch coordinate system were mirrored relative to each other.
+Fix:
+- adjust these values:
+      x_min
+      x_max
+      y_min
+      y_max
 
-### Stable solution
-Keep the current stable binary_sensor coordinates exactly as frozen in the repository.
-
----
-
-## 4. Home Assistant actions did not work
-
-### Symptoms
-- touch logs were visible
-- no actual reaction on Sonos
-
-### Cause
-ESPHome device permissions in Home Assistant / ESPHome were not fully enabled at one stage.
-
-### Stable solution
-Allow the ESPHome device to perform Home Assistant actions and use homeassistant.action in the YAML.
+Tip:
+- use logs to read raw touch values
+- press corners of the screen to calibrate
 
 ---
 
-## 5. Accent or apostrophe rendering produced squares / artifacts
+## Buttons trigger wrong actions
 
-### Symptoms
-- little rectangles after accented characters
-- apostrophes displayed incorrectly
-- Unicode rendering inconsistent depending on metadata
+Cause:
+- touch zones do not match display layout
 
-### Cause
-Sonos metadata can include typographic apostrophes and Unicode variants that do not always map cleanly to the selected ESPHome font glyphs.
+Fix:
+- adjust:
+      x_min / x_max / y_min / y_max
+  inside binary_sensor blocks
 
-### Stable solution
-Keep the current stable font block and the normalization logic inside the text_sensor lambdas.
-
-The stable version converts problematic characters into simpler equivalents before display.
-
----
-
-## 6. ESPHome font errors about duplicate glyphs or missing glyphs
-
-### Symptoms
-- duplicate glyph errors
-- missing glyph \n
-- font compilation failures
-
-### Cause
-Using multiline glyphs blocks incorrectly can introduce hidden newline characters or duplicate symbols.
-
-### Stable solution
-Use single-line glyphs definitions exactly as in the stable YAML.
-
-Do not reintroduce multiline glyph blocks.
+Important:
+- do NOT change display layout if everything works
+- only adjust touch zones
 
 ---
 
-## 7. GitHub push failed with password authentication
+## Screen does not wake properly
 
-### Symptoms
-- push rejected
-- password authentication not supported
+Cause:
+- missing wake logic or touch handling
 
-### Cause
-GitHub no longer allows standard password authentication for Git over HTTPS.
+Fix:
+- ensure:
+      on_touch:
+        - script.execute: wake_screen_only
 
-### Solution
-Use SSH remote or a personal access token.
-
-Recommended:
-
-git remote set-url origin git@github.com:USERNAME/REPO.git
-git push --set-upstream origin master
+- ensure debounce logic with:
+      just_woke flag
 
 ---
 
-## 8. Branch had no upstream
+## Screen goes black instead of showing clock
 
-### Symptoms
-- git push failed with:
-- current branch master has no upstream branch
+Cause:
+- backlight too low
 
-### Solution
+Fix:
+- increase standby brightness:
+      brightness: 30%
 
-git push --set-upstream origin master
-
-After that, a simple git push works.
+Typical working range:
+- 25% to 40%
 
 ---
 
-## 9. Stable baseline rule
+## Clock appears briefly then disappears
 
-Once display, touch mapping and Sonos actions are working:
+Cause:
+- backlight too low or transition delay
 
-- do not change fonts unnecessarily
-- do not change display model unnecessarily
-- do not change touch transforms unless testing is intentional
-- improve visuals only from the frozen stable version
+Fix:
+- set:
+      default_transition_length: 0s
 
-This repository now documents that stable baseline.
+- increase brightness
+
+---
+
+## Weird characters (squares, accents issues)
+
+Cause:
+- unsupported glyphs in font
+- Sonos metadata contains special characters
+
+Fix:
+- use normalized text (already implemented)
+- ensure glyph list includes:
+      apostrophe ' and ’
+- remove unsupported Unicode characters
+
+Note:
+- Sonos sometimes sends typographic apostrophes
+
+---
+
+## Text display glitches
+
+Cause:
+- long strings or encoding issues
+
+Fix:
+- text is split into 2 lines automatically
+- keep limits:
+      title: 18 chars
+      artist: 20 chars
+
+---
+
+## Display is slow (warnings in logs)
+
+Message:
+      display took a long time
+
+Cause:
+- complex drawing
+
+Status:
+- normal behavior
+- no action required
+
+---
+
+## GPIO12 warning
+
+Message:
+      GPIO12 is a strapping pin
+
+Explanation:
+- normal on ESP32
+- safe if not externally pulled
+
+Action:
+- ignore warning
+
+---
+
+## Sonos not responding
+
+Check:
+- Home Assistant entity name
+
+Default:
+      media_player.arc
+
+Fix:
+- replace with your own entity if needed
+
+---
+
+## WiFi issues
+
+Check:
+- credentials in secrets.yaml
+
+Verify:
+      wifi_ssid
+      wifi_password
+
+---
+
+## Power issues
+
+Symptoms:
+- reboot
+- white screen
+- unstable behavior
+
+Fix:
+- use stable 5V power supply
+- or USB power bank
+
+Note:
+Using a power bank is the simplest and recommended solution for portable use.
+
+---
+
+## General advice
+
+- if everything works: DO NOT modify working parts
+- change only one thing at a time
+- always keep a backup of your stable YAML
+
