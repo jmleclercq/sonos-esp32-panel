@@ -4,10 +4,6 @@ esphome:
   on_boot:
     priority: -100
     then:
-      - lambda: |-
-          id(last_touch_ms) = millis();
-          id(screen_sleeping) = false;
-          id(just_woke) = false;
       - light.turn_on:
           id: display_backlight
           brightness: 100%
@@ -32,46 +28,60 @@ captive_portal:
 
 web_server:
 
+substitutions:
+  player: media_player.arc
+  ha_url: !secret ha_url   # e.g. http://192.168.1.114:8123 (no trailing slash)
+
+# ---------------------------------------------------------------- album art
+http_request:
+  timeout: 10s
+  buffer_size_rx: 4096
+
+online_image:
+  - id: album_art
+    url: "${ha_url}/static/icons/favicon-192x192.png"
+    format: PNG
+    type: RGB565
+    resize: 84x84
+    buffer_size: 4096
+    update_interval: never
+    on_download_finished:
+      then:
+        - lvgl.image.update:
+            id: art_img
+            src: album_art
+        - lvgl.widget.hide: art_circle
+        - lvgl.widget.show: art_img
+    on_error:
+      then:
+        - lvgl.widget.show: art_circle
+        - lvgl.widget.hide: art_img
+
+# ---------------------------------------------------------------- time
 time:
   - platform: homeassistant
     id: ha_time
+    on_time_sync:
+      then:
+        - script.execute: update_clock
+    on_time:
+      - seconds: 0
+        minutes: /1
+        then:
+          - script.execute: update_clock
 
 globals:
-  - id: title_line_1
-    type: std::string
+  - id: tv_mode
+    type: bool
     restore_value: no
-    initial_value: '""'
-
-  - id: title_line_2
-    type: std::string
-    restore_value: no
-    initial_value: '""'
-
-  - id: artist_line_1
-    type: std::string
-    restore_value: no
-    initial_value: '""'
-
-  - id: artist_line_2
-    type: std::string
-    restore_value: no
-    initial_value: '""'
-
-  - id: last_touch_ms
-    type: uint32_t
-    restore_value: no
-    initial_value: '0'
+    initial_value: 'false'
 
   - id: screen_sleeping
     type: bool
     restore_value: no
     initial_value: 'false'
 
-  - id: just_woke
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
+# ---------------------------------------------------------------- hardware
 spi:
   - id: tft_spi
     clk_pin: GPIO14
@@ -96,272 +106,16 @@ light:
     restore_mode: ALWAYS_ON
     default_transition_length: 0s
 
-font:
-  - file: "gfonts://Roboto"
-    id: font_small
-    size: 16
-    glyphs: "!%()+,-./0123456789:;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_°?àâäæçèéêëîïôöœùûüÿÀÂÄÆÇÈÉÊËÎÏÔÖŒÙÛÜŸ'’ "
-
-  - file: "gfonts://Roboto"
-    id: font_medium
-    size: 20
-    glyphs: "!%()+,-./0123456789:;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_°?àâäæçèéêëîïôöœùûüÿÀÂÄÆÇÈÉÊËÎÏÔÖŒÙÛÜŸ'’ "
-
-  - file: "gfonts://Roboto"
-    id: font_large
-    size: 26
-    glyphs: "!%()+,-./0123456789:;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_°?àâäæçèéêëîïôöœùûüÿÀÂÄÆÇÈÉÊËÎÏÔÖŒÙÛÜŸ'’ "
-
-  - file: "gfonts://Roboto"
-    id: font_clock
-    size: 48
-    glyphs: "0123456789:"
-
-script:
-  - id: enter_sleep_mode
-    mode: restart
-    then:
-      - lambda: |-
-          id(screen_sleeping) = true;
-          id(just_woke) = false;
-      - light.turn_on:
-          id: display_backlight
-          brightness: 30%
-
-  - id: wake_screen_only
-    mode: restart
-    then:
-      - lambda: |-
-          id(last_touch_ms) = millis();
-          if (id(screen_sleeping)) {
-            id(screen_sleeping) = false;
-            id(just_woke) = true;
-          }
-      - light.turn_on:
-          id: display_backlight
-          brightness: 100%
-
-interval:
-  - interval: 1s
-    then:
-      - lambda: |-
-          const uint32_t timeout_ms = 30000;
-          const uint32_t now = millis();
-
-          if (id(sonos_state).state == "playing") {
-            return;
-          }
-
-          if (!id(screen_sleeping) && (now - id(last_touch_ms) > timeout_ms)) {
-            id(enter_sleep_mode).execute();
-          }
-
-text_sensor:
-  - platform: homeassistant
-    id: sonos_title
-    entity_id: media_player.arc
-    attribute: media_title
-    on_value:
-      then:
-        - lambda: |-
-            auto normalize = [](std::string s) -> std::string {
-              auto repl=[&](std::string a,std::string b){
-                size_t pos=0;
-                while((pos=s.find(a,pos))!=std::string::npos){
-                  s.replace(pos,a.length(),b);
-                  pos+=b.length();
-                }
-              };
-
-              repl("’","'");
-              repl("‘","'");
-              repl("`","'");
-              repl("´","'");
-
-              repl("à","a"); repl("â","a"); repl("ä","a");
-              repl("À","A"); repl("Â","A"); repl("Ä","A");
-
-              repl("é","e"); repl("è","e"); repl("ê","e"); repl("ë","e");
-              repl("É","E"); repl("È","E"); repl("Ê","E"); repl("Ë","E");
-
-              repl("î","i"); repl("ï","i");
-              repl("Î","I"); repl("Ï","I");
-
-              repl("ô","o"); repl("ö","o");
-              repl("Ô","O"); repl("Ö","O");
-
-              repl("ù","u"); repl("û","u"); repl("ü","u");
-              repl("Ù","U"); repl("Û","U"); repl("Ü","U");
-
-              repl("ÿ","y");
-              repl("Ÿ","Y");
-
-              repl("ç","c");
-              repl("Ç","C");
-
-              repl("œ","oe");
-              repl("Œ","OE");
-
-              repl("æ","ae");
-              repl("Æ","AE");
-
-              return s;
-            };
-
-            std::string title = normalize(id(sonos_title).state.c_str());
-
-            if (title.length() > 18) {
-              id(title_line_1) = title.substr(0,18);
-              id(title_line_2) = title.substr(18);
-            } else {
-              id(title_line_1) = title;
-              id(title_line_2) = "";
-            }
-
-  - platform: homeassistant
-    id: sonos_artist
-    entity_id: media_player.arc
-    attribute: media_artist
-    on_value:
-      then:
-        - lambda: |-
-            std::string artist = id(sonos_artist).state.c_str();
-
-            if (artist.length() > 20) {
-              id(artist_line_1) = artist.substr(0,20);
-              id(artist_line_2) = artist.substr(20);
-            } else {
-              id(artist_line_1) = artist;
-              id(artist_line_2) = "";
-            }
-
-  - platform: homeassistant
-    id: sonos_state
-    entity_id: media_player.arc
-
 display:
   - platform: mipi_spi
+    id: main_display
     model: ESP32-2432S028
     spi_id: tft_spi
     cs_pin: GPIO15
     dc_pin: GPIO2
     reset_pin: GPIO4
-    update_interval: 1s
-    lambda: |-
-      if (id(screen_sleeping)) {
-        Color bg(4, 6, 12);
-        Color border(24, 30, 48);
-        Color clock_col(110, 175, 255);
-        Color soft(90, 110, 150);
-
-        it.fill(bg);
-        it.rectangle(6, 6, 228, 308, border);
-
-        auto now = id(ha_time).now();
-        if (now.is_valid()) {
-          it.strftime(120, 110, id(font_clock), clock_col, TextAlign::TOP_CENTER, "%H:%M", now);
-          it.strftime(120, 170, id(font_medium), soft, TextAlign::TOP_CENTER, "%d/%m/%Y", now);
-        } else {
-          it.printf(120, 118, id(font_large), clock_col, TextAlign::TOP_CENTER, "--:--");
-          it.printf(120, 170, id(font_medium), soft, TextAlign::TOP_CENTER, "Waiting for time");
-        }
-
-        it.printf(120, 250, id(font_small), soft, TextAlign::TOP_CENTER, "Touch screen to wake");
-        return;
-      }
-
-      Color bg(6, 8, 14);
-      Color shell(12, 15, 24);
-      Color panel(18, 22, 34);
-      Color panel_alt(22, 28, 42);
-
-      Color header_dark(42, 52, 92);
-      Color header_light(78, 94, 156);
-      Color header_glow(118, 136, 214);
-
-      Color white(255, 255, 255);
-      Color soft_white(225, 232, 245);
-      Color muted(110, 120, 145);
-
-      Color cyan(90, 220, 230);
-      Color green(120, 255, 160);
-      Color amber(255, 190, 80);
-      Color blue(70, 140, 255);
-
-      Color btn_dark(18, 22, 34);
-      Color btn_blue_fill(14, 24, 48);
-      Color btn_play_fill(52, 40, 18);
-
-      Color state_fill(20, 46, 58);
-      Color state_border = cyan;
-      Color state_text = cyan;
-
-      if (id(sonos_state).state == "playing") {
-        state_fill = Color(18, 58, 42);
-        state_border = Color(110, 255, 180);
-        state_text = Color(110, 255, 180);
-      } else if (id(sonos_state).state == "paused") {
-        state_fill = Color(60, 46, 18);
-        state_border = amber;
-        state_text = amber;
-      } else if (id(sonos_state).state == "idle") {
-        state_fill = Color(38, 42, 52);
-        state_border = muted;
-        state_text = soft_white;
-      }
-
-      it.fill(bg);
-
-      it.filled_rectangle(4, 4, 232, 312, shell);
-      it.rectangle(4, 4, 232, 312, Color(34, 40, 60));
-
-      it.filled_rectangle(10, 10, 220, 36, header_dark);
-      it.filled_rectangle(10, 10, 220, 12, header_light);
-      it.line(10, 46, 229, 46, header_glow);
-      it.printf(120, 14, id(font_large), white, TextAlign::TOP_CENTER, "SONOS ARC");
-
-      it.filled_rectangle(18, 58, 110, 30, state_fill);
-      it.rectangle(18, 58, 110, 30, state_border);
-      it.printf(73, 64, id(font_medium), state_text, TextAlign::TOP_CENTER, "%s", id(sonos_state).state.c_str());
-
-      it.line(148, 73, 220, 73, muted);
-      it.line(148, 74, 220, 74, Color(55, 62, 86));
-
-      it.filled_rectangle(14, 98, 212, 64, panel);
-      it.rectangle(14, 98, 212, 64, Color(70, 80, 108));
-      it.line(14, 98, 225, 98, Color(102, 114, 150));
-      it.printf(22, 106, id(font_large), white, "%s", id(title_line_1).c_str());
-      it.printf(22, 132, id(font_large), white, "%s", id(title_line_2).c_str());
-
-      it.filled_rectangle(14, 170, 212, 50, panel_alt);
-      it.rectangle(14, 170, 212, 50, Color(70, 80, 108));
-      it.printf(22, 178, id(font_large), green, "%s", id(artist_line_1).c_str());
-      it.printf(22, 202, id(font_large), green, "%s", id(artist_line_2).c_str());
-
-      it.filled_rectangle(12, 226, 64, 34, btn_dark);
-      it.rectangle(12, 226, 64, 34, soft_white);
-      it.line(12, 226, 75, 226, Color(255, 255, 255));
-      it.printf(44, 234, id(font_medium), soft_white, TextAlign::TOP_CENTER, "PREV");
-
-      it.filled_rectangle(88, 226, 64, 34, btn_play_fill);
-      it.rectangle(88, 226, 64, 34, amber);
-      it.line(88, 226, 151, 226, Color(255, 220, 120));
-      it.printf(120, 234, id(font_medium), amber, TextAlign::TOP_CENTER, "PLAY");
-
-      it.filled_rectangle(164, 226, 64, 34, btn_dark);
-      it.rectangle(164, 226, 64, 34, soft_white);
-      it.line(164, 226, 227, 226, Color(255, 255, 255));
-      it.printf(196, 234, id(font_medium), soft_white, TextAlign::TOP_CENTER, "NEXT");
-
-      it.filled_rectangle(30, 270, 72, 36, btn_blue_fill);
-      it.rectangle(30, 270, 72, 36, blue);
-      it.line(30, 270, 101, 270, Color(110, 175, 255));
-      it.printf(66, 274, id(font_large), blue, TextAlign::TOP_CENTER, "-");
-
-      it.filled_rectangle(138, 270, 72, 36, btn_blue_fill);
-      it.rectangle(138, 270, 72, 36, blue);
-      it.line(138, 270, 209, 270, Color(110, 175, 255));
-      it.printf(174, 274, id(font_large), blue, TextAlign::TOP_CENTER, "+");
+    update_interval: never
+    auto_clear_enabled: false
 
 touchscreen:
   - platform: xpt2046
@@ -370,6 +124,7 @@ touchscreen:
     cs_pin: GPIO33
     interrupt_pin: GPIO36
     threshold: 400
+    update_interval: 20ms
     calibration:
       x_min: 280
       x_max: 3860
@@ -379,108 +134,444 @@ touchscreen:
       swap_xy: false
       mirror_x: true
       mirror_y: false
-    on_touch:
+
+# ---------------------------------------------------------------- fonts
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 700
+    id: font_title
+    size: 24
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 400
+    id: font_artist
+    size: 18
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 500
+    id: font_small
+    size: 14
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 500
+    id: font_clock
+    size: 72
+    bpp: 4
+    glyphs: "0123456789:"
+
+# ---------------------------------------------------------------- Home Assistant data
+text_sensor:
+  - platform: homeassistant
+    id: sonos_title
+    entity_id: ${player}
+    attribute: media_title
+    on_value:
       then:
-        - lambda: |-
-            id(last_touch_ms) = millis();
+        - lvgl.label.update:
+            id: title_lbl
+            text: !lambda 'return x.empty() ? std::string("—") : x;'
+        - script.execute: refresh_media
+
+  - platform: homeassistant
+    id: sonos_artist
+    entity_id: ${player}
+    attribute: media_artist
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: artist_lbl
+            text: !lambda 'return x;'
+
+  - platform: homeassistant
+    id: sonos_source
+    entity_id: ${player}
+    attribute: source
+    on_value:
+      then:
+        - logger.log:
+            format: "Sonos source: '%s'"
+            args: ['x.c_str()']
+        - script.execute: refresh_media
+
+  - platform: homeassistant
+    id: sonos_picture
+    entity_id: ${player}
+    attribute: entity_picture
+    on_value:
+      then:
         - if:
             condition:
-              lambda: 'return id(screen_sleeping);'
+              lambda: 'return x.empty();'
             then:
-              - script.execute: wake_screen_only
+              - lvgl.widget.show: art_circle
+              - lvgl.widget.hide: art_img
+            else:
+              - online_image.set_url:
+                  id: album_art
+                  url: !lambda 'return std::string("${ha_url}") + x;'
 
-binary_sensor:
-  - platform: touchscreen
-    name: Sonos Previous
-    x_min: 0
-    x_max: 74
-    y_min: 185
-    y_max: 235
-    on_press:
+  - platform: homeassistant
+    id: sonos_state
+    entity_id: ${player}
+    on_value:
+      then:
+        - script.execute: refresh_state
+
+sensor:
+  - platform: homeassistant
+    id: sonos_volume
+    entity_id: ${player}
+    attribute: volume_level
+    on_value:
+      then:
+        - lambda: |-
+            if (!lv_obj_has_state(id(vol_slider), LV_STATE_PRESSED)) {
+              lv_slider_set_value(id(vol_slider), (int) (x * 100.0f + 0.5f), LV_ANIM_ON);
+            }
+
+# ---------------------------------------------------------------- scripts
+script:
+  # Home Assistant drops artist / picture attributes on the TV source, which the
+  # ESP never sees as a change: detect TV mode and clear the stale values.
+  - id: refresh_media
+    mode: restart
+    then:
       - if:
           condition:
-            lambda: 'return id(just_woke);'
+            lambda: 'return id(sonos_source).state == "TV" || id(sonos_title).state == "TV";'
           then:
-            - lambda: 'id(just_woke) = false;'
+            - lambda: 'id(tv_mode) = true;'
+            - lvgl.label.update:
+                id: artist_lbl
+                text: ""
+            - lvgl.widget.show: art_circle
+            - lvgl.widget.hide: art_img
           else:
-            - lambda: 'id(last_touch_ms) = millis();'
-            - homeassistant.action:
-                action: media_player.media_previous_track
-                data:
-                  entity_id: media_player.arc
+            - if:
+                condition:
+                  lambda: 'return id(tv_mode);'
+                then:
+                  - lambda: 'id(tv_mode) = false;'
+                  - lvgl.label.update:
+                      id: artist_lbl
+                      text: !lambda 'return id(sonos_artist).state;'
+                  - if:
+                      condition:
+                        lambda: 'return !id(sonos_picture).state.empty();'
+                      then:
+                        - online_image.set_url:
+                            id: album_art
+                            url: !lambda 'return std::string("${ha_url}") + id(sonos_picture).state;'
 
-  - platform: touchscreen
-    name: Sonos Play
-    x_min: 75
-    x_max: 144
-    y_min: 185
-    y_max: 235
-    on_press:
+  - id: refresh_state
+    then:
+      - lambda: |-
+          const std::string &s = id(sonos_state).state;
+          bool playing = (s == "playing");
+          lv_color_t c;
+          const char *txt;
+          if (playing)            { c = lv_color_hex(0x5BE39B); txt = "EN LECTURE"; }
+          else if (s == "paused") { c = lv_color_hex(0xFFB74D); txt = "PAUSE"; }
+          else if (s == "idle" || s == "off" || s == "standby") { c = lv_color_hex(0x8A93AB); txt = "VEILLE"; }
+          else                    { c = lv_color_hex(0x4DD6E6); txt = "..."; }
+
+          lv_label_set_text(id(state_lbl), txt);
+          lv_obj_set_style_text_color(id(state_lbl), c, 0);
+          lv_obj_set_style_bg_color(id(state_dot), c, 0);
+          lv_obj_set_style_bg_color(id(art_circle), c, 0);
+          lv_label_set_text(id(play_icon), playing ? "\xEF\x81\x8C" : "\xEF\x81\x8B");
+
+  - id: update_clock
+    then:
+      - lambda: |-
+          auto now = id(ha_time).now();
+          if (!now.is_valid()) return;
+          static const char *days[] = {"Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"};
+          static const char *months[] = {"janvier","fevrier","mars","avril","mai","juin","juillet","aout","septembre","octobre","novembre","decembre"};
+          char buf[48];
+          snprintf(buf, sizeof(buf), "%02d:%02d", now.hour, now.minute);
+          lv_label_set_text(id(clock_lbl), buf);
+          snprintf(buf, sizeof(buf), "%s %d %s", days[now.day_of_week - 1], now.day_of_month, months[now.month - 1]);
+          lv_label_set_text(id(date_lbl), buf);
+
+  - id: go_to_sleep
+    then:
+      - lambda: 'id(screen_sleeping) = true;'
+      - lvgl.page.show: clock_page
+      - light.turn_on:
+          id: display_backlight
+          brightness: 55%
+
+  - id: wake_up
+    then:
+      - lambda: 'id(screen_sleeping) = false;'
+      - lvgl.page.show: main_page
+      - light.turn_on:
+          id: display_backlight
+          brightness: 100%
+
+# Sleep after 30 s of inactivity, unless music is playing
+interval:
+  - interval: 1s
+    then:
       - if:
           condition:
-            lambda: 'return id(just_woke);'
+            and:
+              - lambda: 'return !id(screen_sleeping) && id(sonos_state).state != "playing";'
+              - lvgl.is_idle:
+                  timeout: 30s
           then:
-            - lambda: 'id(just_woke) = false;'
-          else:
-            - lambda: 'id(last_touch_ms) = millis();'
-            - homeassistant.action:
-                action: media_player.media_play_pause
-                data:
-                  entity_id: media_player.arc
+            - script.execute: go_to_sleep
 
-  - platform: touchscreen
-    name: Sonos Next
-    x_min: 145
-    x_max: 239
-    y_min: 185
-    y_max: 235
-    on_press:
-      - if:
-          condition:
-            lambda: 'return id(just_woke);'
-          then:
-            - lambda: 'id(just_woke) = false;'
-          else:
-            - lambda: 'id(last_touch_ms) = millis();'
-            - homeassistant.action:
-                action: media_player.media_next_track
-                data:
-                  entity_id: media_player.arc
+# ---------------------------------------------------------------- UI
+lvgl:
+  displays:
+    - main_display
+  touchscreens:
+    - main_touch
+  buffer_size: 25%
+  bg_color: 0x0B0E17
+  style_definitions:
+    - id: style_card
+      bg_color: 0x151B2C
+      bg_opa: COVER
+      radius: 18
+      border_width: 1
+      border_color: 0x232B44
+      pad_all: 0
+    - id: style_btn
+      bg_color: 0x1B2338
+      bg_opa: COVER
+      radius: 100%
+      border_width: 1
+      border_color: 0x2C3858
+      shadow_width: 0
+      text_color: 0xE6ECFA
+      text_font: montserrat_20
+  pages:
+    # ------------------------------------------------ main page
+    - id: main_page
+      bg_color: 0x0B0E17
+      widgets:
+        # header
+        - label:
+            id: header_lbl
+            text: "SONOS ARC"
+            text_font: font_small
+            text_color: 0x8A93AB
+            text_letter_space: 2
+            align: TOP_LEFT
+            x: 14
+            y: 12
+        - obj:
+            id: state_dot
+            width: 8
+            height: 8
+            radius: 100%
+            bg_color: 0x4DD6E6
+            bg_opa: COVER
+            border_width: 0
+            align: TOP_RIGHT
+            x: -14
+            y: 16
+        - label:
+            id: state_lbl
+            text: "..."
+            text_font: font_small
+            text_color: 0x4DD6E6
+            align: TOP_RIGHT
+            x: -28
+            y: 12
 
-  - platform: touchscreen
-    name: Sonos Volume Down
-    x_min: 0
-    x_max: 134
-    y_min: 236
-    y_max: 319
-    on_press:
-      - if:
-          condition:
-            lambda: 'return id(just_woke);'
-          then:
-            - lambda: 'id(just_woke) = false;'
-          else:
-            - lambda: 'id(last_touch_ms) = millis();'
-            - homeassistant.action:
-                action: media_player.volume_down
-                data:
-                  entity_id: media_player.arc
+        # now playing card
+        - obj:
+            styles: style_card
+            x: 10
+            y: 38
+            width: 220
+            height: 150
+            scrollbar_mode: "OFF"
+            widgets:
+              - image:
+                  id: art_img
+                  src: album_art
+                  hidden: true
+                  align: TOP_MID
+                  y: 8
+                  radius: 12
+                  clip_corner: true
+              - obj:
+                  id: art_circle
+                  width: 52
+                  height: 52
+                  radius: 100%
+                  bg_color: 0x4DD6E6
+                  bg_opa: COVER
+                  border_width: 0
+                  align: TOP_MID
+                  y: 14
+                  widgets:
+                    - label:
+                        text: ""
+                        text_font: montserrat_28
+                        text_color: 0x0B0E17
+                        align: CENTER
+              - label:
+                  id: title_lbl
+                  text: "—"
+                  text_font: font_title
+                  text_color: 0xFFFFFF
+                  long_mode: SCROLL_CIRCULAR
+                  width: 196
+                  text_align: CENTER
+                  align: TOP_MID
+                  y: 94
+              - label:
+                  id: artist_lbl
+                  text: ""
+                  text_font: font_artist
+                  text_color: 0x4DD6E6
+                  long_mode: SCROLL_CIRCULAR
+                  width: 196
+                  text_align: CENTER
+                  align: TOP_MID
+                  y: 124
 
-  - platform: touchscreen
-    name: Sonos Volume Up
-    x_min: 135
-    x_max: 239
-    y_min: 236
-    y_max: 319
-    on_press:
-      - if:
-          condition:
-            lambda: 'return id(just_woke);'
-          then:
-            - lambda: 'id(just_woke) = false;'
-          else:
-            - lambda: 'id(last_touch_ms) = millis();'
-            - homeassistant.action:
-                action: media_player.volume_up
-                data:
-                  entity_id: media_player.arc
+        # transport controls
+        - button:
+            id: prev_btn
+            styles: style_btn
+            width: 56
+            height: 56
+            x: 22
+            y: 202
+            on_click:
+              - homeassistant.action:
+                  action: media_player.media_previous_track
+                  data:
+                    entity_id: ${player}
+            widgets:
+              - label:
+                  text: ""
+                  text_font: montserrat_20
+                  align: CENTER
+        - button:
+            id: play_btn
+            styles: style_btn
+            width: 68
+            height: 68
+            x: 86
+            y: 196
+            bg_color: 0x4DD6E6
+            border_width: 0
+            text_color: 0x0B0E17
+            on_click:
+              - homeassistant.action:
+                  action: media_player.media_play_pause
+                  data:
+                    entity_id: ${player}
+            widgets:
+              - label:
+                  id: play_icon
+                  text: ""
+                  text_font: montserrat_28
+                  text_color: 0x0B0E17
+                  align: CENTER
+        - button:
+            id: next_btn
+            styles: style_btn
+            width: 56
+            height: 56
+            x: 162
+            y: 202
+            on_click:
+              - homeassistant.action:
+                  action: media_player.media_next_track
+                  data:
+                    entity_id: ${player}
+            widgets:
+              - label:
+                  text: ""
+                  text_font: montserrat_20
+                  align: CENTER
+
+        # volume
+        - label:
+            text: ""
+            text_font: montserrat_20
+            text_color: 0x8A93AB
+            x: 14
+            y: 284
+        - slider:
+            id: vol_slider
+            x: 46
+            y: 292
+            width: 148
+            height: 8
+            min_value: 0
+            max_value: 100
+            value: 20
+            bg_color: 0x232B44
+            bg_opa: COVER
+            indicator:
+              bg_color: 0x4DD6E6
+            knob:
+              bg_color: 0xFFFFFF
+              pad_all: 5
+            on_release:
+              - homeassistant.action:
+                  action: media_player.volume_set
+                  data:
+                    entity_id: ${player}
+                    volume_level: !lambda 'return lv_slider_get_value(id(vol_slider)) / 100.0f;'
+        - label:
+            text: ""
+            text_font: montserrat_20
+            text_color: 0x8A93AB
+            align: TOP_RIGHT
+            x: -12
+            y: 284
+
+    # ------------------------------------------------ clock / sleep page
+    - id: clock_page
+      bg_color: 0x080C16
+      on_press:
+        - script.execute: wake_up
+      widgets:
+        - label:
+            id: clock_lbl
+            text: "--:--"
+            text_font: font_clock
+            text_color: 0xD6EAFF
+            align: CENTER
+            y: -20
+        - label:
+            id: date_lbl
+            text: ""
+            text_font: font_artist
+            text_color: 0xA9BDE0
+            align: CENTER
+            y: 40
+        - label:
+            text: "Touchez pour reveiller"
+            text_font: font_small
+            text_color: 0x6B7A9C
+            align: BOTTOM_MID
+            y: -16
