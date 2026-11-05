@@ -30,6 +30,32 @@ web_server:
 
 substitutions:
   player: media_player.arc
+  ha_url: !secret ha_url   # e.g. http://192.168.1.114:8123 (no trailing slash)
+
+# ---------------------------------------------------------------- album art
+http_request:
+  timeout: 10s
+  buffer_size_rx: 4096
+
+online_image:
+  - id: album_art
+    url: "${ha_url}/static/icons/favicon-192x192.png"
+    format: PNG
+    type: RGB565
+    resize: 84x84
+    buffer_size: 4096
+    update_interval: never
+    on_download_finished:
+      then:
+        - lvgl.image.update:
+            id: art_img
+            src: album_art
+        - lvgl.widget.hide: art_circle
+        - lvgl.widget.show: art_img
+    on_error:
+      then:
+        - lvgl.widget.show: art_circle
+        - lvgl.widget.hide: art_img
 
 # ---------------------------------------------------------------- time
 time:
@@ -45,6 +71,11 @@ time:
           - script.execute: update_clock
 
 globals:
+  - id: tv_mode
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
   - id: screen_sleeping
     type: bool
     restore_value: no
@@ -156,6 +187,7 @@ text_sensor:
         - lvgl.label.update:
             id: title_lbl
             text: !lambda 'return x.empty() ? std::string("—") : x;'
+        - script.execute: refresh_media
 
   - platform: homeassistant
     id: sonos_artist
@@ -166,6 +198,34 @@ text_sensor:
         - lvgl.label.update:
             id: artist_lbl
             text: !lambda 'return x;'
+
+  - platform: homeassistant
+    id: sonos_source
+    entity_id: ${player}
+    attribute: source
+    on_value:
+      then:
+        - logger.log:
+            format: "Sonos source: '%s'"
+            args: ['x.c_str()']
+        - script.execute: refresh_media
+
+  - platform: homeassistant
+    id: sonos_picture
+    entity_id: ${player}
+    attribute: entity_picture
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return x.empty();'
+            then:
+              - lvgl.widget.show: art_circle
+              - lvgl.widget.hide: art_img
+            else:
+              - online_image.set_url:
+                  id: album_art
+                  url: !lambda 'return std::string("${ha_url}") + x;'
 
   - platform: homeassistant
     id: sonos_state
@@ -188,6 +248,38 @@ sensor:
 
 # ---------------------------------------------------------------- scripts
 script:
+  # Home Assistant drops artist / picture attributes on the TV source, which the
+  # ESP never sees as a change: detect TV mode and clear the stale values.
+  - id: refresh_media
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: 'return id(sonos_source).state == "TV" || id(sonos_title).state == "TV";'
+          then:
+            - lambda: 'id(tv_mode) = true;'
+            - lvgl.label.update:
+                id: artist_lbl
+                text: ""
+            - lvgl.widget.show: art_circle
+            - lvgl.widget.hide: art_img
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(tv_mode);'
+                then:
+                  - lambda: 'id(tv_mode) = false;'
+                  - lvgl.label.update:
+                      id: artist_lbl
+                      text: !lambda 'return id(sonos_artist).state;'
+                  - if:
+                      condition:
+                        lambda: 'return !id(sonos_picture).state.empty();'
+                      then:
+                        - online_image.set_url:
+                            id: album_art
+                            url: !lambda 'return std::string("${ha_url}") + id(sonos_picture).state;'
+
   - id: refresh_state
     then:
       - lambda: |-
@@ -317,6 +409,14 @@ lvgl:
             height: 150
             scrollbar_mode: "OFF"
             widgets:
+              - image:
+                  id: art_img
+                  src: album_art
+                  hidden: true
+                  align: TOP_MID
+                  y: 8
+                  radius: 12
+                  clip_corner: true
               - obj:
                   id: art_circle
                   width: 52
@@ -342,7 +442,7 @@ lvgl:
                   width: 196
                   text_align: CENTER
                   align: TOP_MID
-                  y: 82
+                  y: 94
               - label:
                   id: artist_lbl
                   text: ""
@@ -352,7 +452,7 @@ lvgl:
                   width: 196
                   text_align: CENTER
                   align: TOP_MID
-                  y: 116
+                  y: 124
 
         # transport controls
         - button:
