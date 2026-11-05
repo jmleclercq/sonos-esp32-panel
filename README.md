@@ -67,6 +67,8 @@ Stable status:
 - state indicator colored by playback state (playing / paused / idle)
 - scrolling title and artist, with full accent support (no more text normalization)
 - volume slider synchronized with Home Assistant
+- album art downloaded from Home Assistant (84x84, PNG), with a fallback icon when no cover is available
+- TV source detected: cover and artist are cleared and restored when music resumes
 - brighter sleep clock page with French date, touch to wake
 - same sleep logic as the stable version (30 s, never while playing)
 
