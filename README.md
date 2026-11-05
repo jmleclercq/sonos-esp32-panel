@@ -13,8 +13,10 @@
 </p>
 
 <p align="center">
-  <img src="images/screen.jpeg" width="420" alt="Stable Sonos touch panel result">
+  <img src="images/lvgl-ui-preview.png" width="760" alt="LVGL interface preview: playing, paused and sleep clock">
 </p>
+
+<p align="center"><em>Preview of the LVGL interface (rendered mockup): playing, paused, sleep clock.</em></p>
 
 ## Overview
 
@@ -32,11 +34,19 @@ It also provides touch controls for:
 - Volume down
 - Volume up
 
-This repository documents the stable working version of the project.
+This repository provides two working versions of the interface:
+- **LVGL interface (recommended)**: modern look with rounded cards, icon buttons and a volume slider
+- **Classic interface**: the original stable version using manual drawing
 
-## Proven result
+## Classic interface (stable reference)
 
-The screenshot above shows the current stable interface running on the device after installation and configuration.
+`esphome/sunton-2432s028r-sonos.yaml` is the original stable version, kept unchanged.
+
+<p align="center">
+  <img src="images/screen.jpeg" width="420" alt="Classic Sonos touch panel result">
+</p>
+
+The photo above shows the classic interface running on the device after installation and configuration.
 
 Stable status:
 - display fully working
@@ -50,7 +60,7 @@ Stable status:
 - no sleep while music is playing
 - sleep after 30 seconds when playback is not active
 
-## LVGL interface (new, `lvgl-ui` branch)
+## LVGL interface (recommended)
 
 `esphome/sunton-2432s028r-sonos-lvgl.yaml` is a redesign of the UI using LVGL instead of manual drawing:
 - dark theme with rounded cards, round transport buttons with icons
@@ -60,13 +70,7 @@ Stable status:
 - brighter sleep clock page with French date, touch to wake
 - same sleep logic as the stable version (30 s, never while playing)
 
-<p align="center">
-  <img src="images/lvgl-ui-preview.png" width="760" alt="LVGL interface preview: playing, paused and sleep clock">
-</p>
-
-<p align="center"><em>Preview of the LVGL interface (rendered mockup): playing, paused, sleep clock.</em></p>
-
-The original stable file is kept unchanged.
+Tested on the Sunton ESP32-2432S028 with ESPHome 2026.10 (ESP-IDF). The preview above is a rendered mockup, not a photo.
 
 ## Hardware
 
