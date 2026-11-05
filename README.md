@@ -60,6 +60,12 @@ Stable status:
 - brighter sleep clock page with French date, touch to wake
 - same sleep logic as the stable version (30 s, never while playing)
 
+<p align="center">
+  <img src="images/lvgl-ui-preview.png" width="760" alt="LVGL interface preview: playing, paused and sleep clock">
+</p>
+
+<p align="center"><em>Preview of the LVGL interface (rendered mockup): playing, paused, sleep clock.</em></p>
+
 The original stable file is kept unchanged.
 
 ## Hardware
