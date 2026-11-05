@@ -50,6 +50,18 @@ Stable status:
 - no sleep while music is playing
 - sleep after 30 seconds when playback is not active
 
+## LVGL interface (new, `lvgl-ui` branch)
+
+`esphome/sunton-2432s028r-sonos-lvgl.yaml` is a redesign of the UI using LVGL instead of manual drawing:
+- dark theme with rounded cards, round transport buttons with icons
+- state indicator colored by playback state (playing / paused / idle)
+- scrolling title and artist, with full accent support (no more text normalization)
+- volume slider synchronized with Home Assistant
+- brighter sleep clock page with French date, touch to wake
+- same sleep logic as the stable version (30 s, never while playing)
+
+The original stable file is kept unchanged.
+
 ## Hardware
 
 Tested with:
@@ -77,6 +89,7 @@ Main features:
     │   └── screen.jpeg
     └── esphome
         ├── sunton-2432s028r-sonos.yaml
+        ├── sunton-2432s028r-sonos-lvgl.yaml
         └── secrets.example.yaml
 
 ## ESPHome configuration
