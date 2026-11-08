@@ -18,6 +18,12 @@
 
 <p align="center"><em>Preview of the interface (rendered mockup): playing, paused, sleep clock.</em></p>
 
+<p align="center">
+  <img src="images/device-photo.jpg" width="320" alt="The panel running on a Sunton ESP32 display, playing a track">
+</p>
+
+<p align="center"><em>The real panel on a Sunton ESP32-2432S028, playing a track with album art.</em></p>
+
 ## Overview
 
 A wall or desk controller for a Sonos speaker, built on a Sunton ESP32-2432S028 2.8 inch touchscreen. ESPHome connects it to Home Assistant, which talks to Sonos.
